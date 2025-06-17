@@ -1,0 +1,1704 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="logo.png" type="image/png">
+    <title>Chat Assistant NTP</title>
+    <script src="https://unpkg.com/lunr/lunr.js"></script>
+    <style>
+        /* Reset dan Base Styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #c0352c 0%, #0a4d85 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Login Styles */
+        .login-container {
+            background: white;
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+        }
+
+        .login-title {
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 28px;
+            font-weight: 600;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: 500;
+        }
+
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e1e1e1;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input:focus, .form-group select:focus {
+            outline: none;
+            border-color: #0a4d85;
+        }
+
+        .login-btn {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #c0352c 0%, #0a4d85 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+        }
+
+        .login-btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .error-message {
+            color: #e74c3c;
+            margin-top: 10px;
+            font-size: 14px;
+        }
+
+        .demo-accounts {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            text-align: left;
+            font-size: 12px;
+        }
+
+        .demo-accounts h4 {
+            margin-bottom: 10px;
+            color: #333;
+        }
+
+        .demo-accounts p {
+            margin: 5px 0;
+            color: #666;
+        }
+
+        /* Chat Styles */
+        .chat-container {
+            display: none; /* Initially hidden */
+            width: 100%;
+            max-width: 800px;
+            height: 90vh;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            flex-direction: column;
+        }
+
+        .chat-header {
+            background: linear-gradient(135deg, #c0352c 0%, #0a4d85 100%);
+            color: white;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .chat-header h2 {
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        .logout-btn {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.3s ease;
+        }
+
+        .logout-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .chat-messages {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            background: #f8f9fa;
+        }
+
+        .message {
+            margin-bottom: 15px;
+            display: flex;
+            align-items: flex-end;
+        }
+
+        .message.user {
+            justify-content: flex-end;
+        }
+
+        .message.bot {
+            justify-content: flex-start;
+        }
+
+        .message-bubble {
+            max-width: 70%;
+            padding: 12px 16px;
+            border-radius: 18px;
+            word-wrap: break-word;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .message.user .message-bubble {
+            background: linear-gradient(135deg, #c0352c 0%, #0a4d85 100%);
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+
+        .message.bot .message-bubble {
+            background: white;
+            color: #333;
+            border: 1px solid #e1e1e1;
+            border-bottom-left-radius: 4px;
+        }
+
+        .message-time {
+            font-size: 11px;
+            color: #999;
+            margin: 0 8px;
+        }
+
+        .chat-input {
+            padding: 20px;
+            background: white;
+            border-top: 1px solid #e1e1e1;
+            display: flex;
+            gap: 10px;
+        }
+
+        .chat-input input {
+            flex: 1;
+            padding: 12px 16px;
+            border: 2px solid #e1e1e1;
+            border-radius: 25px;
+            font-size: 16px;
+            outline: none;
+            transition: border-color 0.3s ease;
+        }
+
+        .chat-input input:focus {
+            border-color: #0a4d85;
+        }
+
+        .send-btn {
+            background: linear-gradient(135deg, #c0352c 0%, #0a4d85 100%);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: transform 0.2s ease;
+        }
+
+        .send-btn:hover {
+            transform: scale(1.05);
+        }
+
+        .send-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .message-bubble ul, .message-bubble ol {
+            padding-left: 25px;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .login-container { margin: 20px; padding: 30px 20px; }
+            .chat-container { height: 100vh; border-radius: 0; margin: 0; max-width: 100%; }
+            .message-bubble { max-width: 85%; }
+        }
+
+        /* Typing Indicator */
+        .typing-indicator { display: flex; align-items: center; padding: 12px 16px; background: white; border: 1px solid #e1e1e1; border-radius: 18px; border-bottom-left-radius: 4px; max-width: 70px; min-width: 60px; }
+        .typing-dot { width: 8px; height: 8px; border-radius: 50%; background: #999; margin: 0 2px; animation: typing 1.4s infinite; }
+        .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+        .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes typing { 0%, 60%, 100% { transform: translateY(0); } 30% { transform: translateY(-8px); } }
+    </style>
+</head>
+<body>
+    <div class="login-container" id="loginContainer">
+        <h1 class="login-title">
+            <img src="./logo.png" alt="Logo" style="height: 1.7em; vertical-align: middle; margin-right: 0.3em;">
+            NTPBot
+        </h1>
+        <form id="loginForm">
+            <div class="form-group">
+                <label for="userType">Tipe Akun:</label>
+                <select id="userType" required>
+                    <option value="">Pilih Tipe Akun</option>
+                    <option value="tim">Tim</option>
+                    <option value="manager">Manager</option>
+                    <option value="administrator">Administrator</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="username">Username:</label>
+                <input type="text" id="username" required>
+            </div>
+            <div class="form-group">
+                <label for="password">Password:</label>
+                <input type="password" id="password" required>
+            </div>
+            <button type="submit" class="login-btn">Masuk</button>
+            <div id="errorMessage" class="error-message"></div>
+        </form>
+        <div class="demo-accounts">
+            <h4>Catatan:</h4>
+            <p>Masukkan akun sesuai dengan akun autentik tim yang telah diinformasikan oleh Team Leader masing-masing!</p>
+        </div>
+    </div>
+
+    <div class="chat-container" id="chatContainer">
+        <div class="chat-header">
+            <div>
+                <h2>💬 Assistant Chatbot PT. Nusa Tiga Putra</h2>
+                <small id="userInfo"></small>
+            </div>
+            <button class="logout-btn" id="logoutBtn">Keluar</button>
+        </div>
+        <div class="chat-messages" id="chatMessages"></div>
+        <div class="chat-input">
+            <input type="text" id="messageInput" placeholder="Ketik pesan Anda..." maxlength="500">
+            <button class="send-btn" id="sendBtn">Kirim</button>
+        </div>
+    </div>
+
+    <script>
+        const accounts = {
+            'tim': [
+                { username: 'teamamarrecovery', password: 'amarrecovery', team: 'amarrecovery', fullName: 'Tim Amar Recovery' },
+                { username: 'teamamardelqy', password: 'delqyjayajayajaya', team: 'amardelqy', fullName: 'Tim Amar Delqy' },
+                { username: 'teambaf', password: 'tetapsemangatmencaripayment', team: 'baf', fullName: 'Tim BAF' },
+                { username: 'teambnidanmba', password: 'pucukdingin(mei2025)', team: 'bni', fullName: 'Tim BNI' },
+                { username: 'teamcollectius', password: 'luarbiasatetapsemangat', team: 'collectius', fullName: 'Tim Collectius' },
+                { username: 'teamtaasset', password: 'settingduluini', team: 'taasset', fullName: 'Tim TAID' },                
+            ],
+            'manager': [{ username: 'managernpt', password: '456', team: 'manager', fullName: 'Manager PT. Nusa Tiga Putra' }],
+            'administrator': [{ username: 'itntp', password: 'DataCentreNTP2025', team: 'administrator', fullName: 'TI PT. Nusa Tiga Putra' }]
+        };
+
+        const qaPairs = [
+            // [PERUBAHAN]: Menambahkan 'id' unik untuk setiap data
+            // Common Pairs
+            {
+                id: 0,
+                keywords: ['jam kerja', 'waktu kerja', 'office hours', 'jam kantor'],
+                answer: "Jam kantor kita adalah Senin sampai Jumat, dari pukul 08:00 pagi hingga 17:00 sore WIB. Untuk hari Sabtu, jam kerja mulai dari pukul 08:00 pagi hingga 16:00. Bagi tim lapangan, jam kerja bisa fleksibel selama target penagihan tercapai."
+            },
+            {
+                id: 1,
+                keywords: ['terima kasih', 'thanks', 'makasih'],
+                answer: "Sama-sama! Bantu-membantu itu vibes positif yang harus dibagikan. Ada lagi yang bisa saya bantu hari ini? Ayo tanya aja, saya di sini cuma buat kamu kok 😉"
+            },
+            {
+                id: 2,
+                keywords: ['oke', 'ok', 'sip', 'baiklah', 'siap', 'paham'],
+                answer: "Oke sip mantul! Kalau ada pertanyaan lain, feel free aja untuk nanya. Saya di sini seperti bot yang selalu on time 🙌"
+            },
+            {
+                id: 3,
+                keywords: ['halo', 'hi', 'hai', 'hello', 'permisi', 'ada orang'],
+                answer: "Hai hai 👋 Selamat datang di layanan chat kami. Ada yang bisa saya bantu hari ini? Jangan sungkan ya, saya di sini cuma buat kamu kok. Nggak ada drama, cuma jawaban 😘"
+            },
+            {
+                id: 4,
+                keywords: ['penagihan'],
+                answer: "Penagihan itu penting, tapi tetap harus ramah dan profesional ya. Jika ada konsumen yang belum bayar cicilan, segera follow-up dengan sopan. Biar mereka merasa didengar, tapi juga sadar kewajiban."
+            },
+            {
+                id: 5,
+                keywords: ['cara menagih', 'strategi tagih', 'tips penagihan'],
+                answer: "Tips menagih yang efektif: kenali situasi konsumen, bicara dengan tenang, tawarkan solusi, dan catat semua percakapan. Ingat, kita bukan preman, tapi kolektor profesional 🤝"
+            },
+            {
+                id: 6,
+                keywords: ['konsumen tidak bayar', 'nasabah lalai', 'debitur mangkir', 'nasabah rese'],
+                answer: "Kalau konsumen nggak bayar atau susah dihubungi, coba follow-up berkala dan gunakan pendekatan persuasif. Kalau sudah mentok, bisa lanjut ke tahap administratif. Tenang, kita backup kamu penuh!"
+            },
+            {
+                id: 7,
+                keywords: ['target', 'quota', 'performa'],
+                answer: "Target penagihan itu kayak misi harian. Semakin rajin kamu, semakin besar hasilnya. Jadi, keep hustling tapi tetap jaga etika ya. Kita bukan desk collection abal-abal 😤"
+            },
+            {
+                id: 8,
+                keywords: ['kenalan', 'siapa kamu', 'bot apa'],
+                answer: "Hai hai! Saya adalah chatbot kece yang dibuat buat bantu kamu. Nggak punya mood, nggak marah-marah, cuma fokus jawab pertanyaan kamu. Feel free aja tanya apa pun ya 😊"
+            },
+            {
+                id: 9,
+                keywords: ['capek', 'lelah', 'ngantuk', 'cape'],
+                answer: "Capek itu manusiawi, apalagi kalau seharian ngejar konsumen yang susah ditemui. Istirahat dulu, minum air putih, tarik napas dalam-dalam. Besok masih ada target baru kok 💪"
+            },
+            {
+                id: 10,
+                keywords: ['tips', 'saran', 'rekomendasi'],
+                answer: "Tips dariku: Jangan nunda-nunda, jaga komunikasi, dan selalu ramah sama rekan kerja. Percaya deh, vibe positif itu menular dan bikin hari makin enak dilewati 🧡"
+            },
+            {
+                id: 11,
+                keywords: ['kerja', 'kerja keras', 'target', 'penagihan'],
+                answer: "Kerja itu wajib, tapi jangan lupa bersyukur dan nikmati prosesnya. Target tinggi boleh, asal jangan lupa istirahat dan tetap jaga kesehatan. Biar bisa jalan panjang sama-sama 🤝"
+            },
+            {
+                id: 12,
+                keywords: ['maaf', 'permisi', 'permohonan maaf'],
+                answer: "Nggak apa-apa kok! Semua orang bisa salah, yang penting saling memahami :). Ada yang bisa saya bantu untuk memperbaiki situasi?"
+            },
+            {
+                id: 13,
+                keywords: ['makan siang', 'istirahat', 'break time'],
+                answer: "Istirahat makan siang biasanya dari jam 12:00 sampai 13:00 WIB. Jangan lupa makan ya, biar fokus tetap on 🔥"
+            },
+            {
+                id: 14,
+                keywords: ['training', 'pelatihan', 'diklat'],
+                answer: "Training itu kayak kuliah singkat buat skill kamu naik level. Biasanya diadakan rutin, info jadwalnya biasanya dari HRD atau team leader. Jadi, siap-siap ajalah ya 😁"
+            },
+            {
+                id: 15,
+                keywords: ['lembur'],
+                answer: "Kita lembur mulai tanggal 20 di setiap bulan, tapi tergantung situasi dan pencapaian target perusahaan. Keep strong pokoknya, kita kejar target supaya gajinya full senyum🔥"
+            },
+            {
+                id: 16,
+                keywords: ['gaji', 'bonus'],
+                answer: "<p>===========================</p><p><strong>DESKCALL SALARY (RECOVERY TEAM)</strong></p><p>===========================</p><p>&nbsp;</p><p><strong>GAJI POKOK</strong> : Rp 1,300,000 (3 bulan pertama) selanjutnya Rp 1,500,000 - Naik bertahap setiap tahunnya.</p><p><strong>UPAH PAYMENT YANG DIHASILKAN PERBULAN</strong> = Total payment diatas 10 JUTA X 6%</p><p>(TOTAL PAYMENT - RP 10,000,000 = TOTAL PAYMENT X 6%)</p><p><strong>REWARD TARGET (BONUS)</strong> :</p><p>Achievement 1 = Rp12.000.000 (Rp100.000)</p><p>Achievement 2 = Rp17.000.000 (Rp300.000)</p><p>Achievement 3 = Rp22.000.000 (Rp600.000)</p><p><strong>LEMBUR</strong> = Rp20.000</p><p>Perbulan max 10x Lembur (Bisa lebih - Menyesuaikan) = Rp200.000</p><p>&nbsp;</p><p><strong>PERHITUNGAN UPAH / GAJI (CONTOH)</strong> :</p><p>Payment Rp12,000,000 - Rp10,000,000 = Rp2,000,000</p><p>Rp 2,000,000 X 6% = Rp 120,000</p><p>Total upah yang di dapat : Gaji pokok + Payment + Achieve 1 + lembur</p><p>Rp 1,300,000 + Rp 120,000 + Rp 100,000 + Rp 200,000 = Rp 1,720,000</p><p>&nbsp;</p><p>Payment Rp17,000,000 - Rp10,000,000 = Rp7,000,000</p><p>Rp 7,000,000 X 6% = Rp 420,000</p><p>Total upah yang di dapat : Gaji pokok + Payment + Achieve 2 + lembur</p><p>Rp 1,300,000 + Rp 420,000 + Rp 300,000 + Rp 200,000 = Rp 2,220,000</p><p>&nbsp;</p><p>Payment Rp22,000,000 - Rp10,000,000 = Rp12,000,000</p><p>Rp 12,000,000 X 6% = Rp 720,000</p><p>Total upah yang di dapat : Gaji pokok + Payment + Achieve 3 + lembur</p><p>Rp 1,300,000 + Rp 720,000 + Rp 600,000 + Rp 200,000 = Rp 2,820,000</p><p>&nbsp;</p><p><strong>NOTE :</strong> <strong>PAYMENT SESUAI (MENGIKUTI) YANG DIDAPATKAN DAN DIGAPA'I</strong></p><p>Contoh lainnya (Akumulasi payment dengan gaji pokok diatas 3 bulan bekerja)</p><p>&nbsp;</p><p>Payment Rp 30,000,000 - Rp 10,000,000 = Rp 20,000,000</p><p>Rp 20,000,000 X 6% = Rp 1,200,000</p><p>Total upah yang di dapat : Gaji pokok + Payment + Achieve 3 + lembur</p><p>Rp 1,500,000 + Rp 1,200,000 + Rp 600,000 + Rp 200,000 = Rp 3,500,000</p><p>&nbsp;</p><p>Payment Rp 40,000,000 - Rp 10,000,000 = Rp 30,000,000</p><p>Rp 30,000,000 X 6% = Rp 1,800,000</p><p>Total upah yang di dapat : Gaji pokok + Payment + Achieve 3 + lembur</p><p>Rp 1,500,000 + Rp 1,800,000 + Rp 600,000 + Rp 200,000 = Rp 4,100,000</p><p>&nbsp;</p><p>Payment Rp 50,000,000 - Rp 10,000,000 = Rp 40,000,000</p><p>Rp 40,000,000 X 6% = Rp 2,400,000</p><p>Total upah yang di dapat : Gaji pokok + Payment + Achieve 3 + lembur</p><p>Rp 1,500,000 + Rp 2,400,000 + Rp 600,000 + Rp 200,000 = Rp 4,700,000</p><p>&nbsp;</p><p><strong>FASILITAS</strong></p><p>DISEDIAKAN CATERING (KATERING) / KONSUMSI UNTUK MAKAN SIANG MAUPUN JAM LEMBUR</p><p>&nbsp</p><p>===========================</p><p><strong>DESKCALL SALARY (DELQY TEAM)</strong></p><p>===========================</p><p>&nbsp;</p><p><strong>GAJI POKOK</strong> : Rp 1,300,000 (3 bulan pertama) selanjutnya Rp 1,500,000 - Naik bertahap setiap tahunnya.</p><p><strong>UPAH PAYMENT YANG DIHASILKAN PERBULAN</strong> = Total payment X 3%</p><p>(TOTAL PAYMENT X 3%)</p><p><strong>REWARD TARGET (BONUS)</strong> :</p><p>Achievement 1 = Rp35.000.000 (Rp100.000)</p><p>Achievement 2 = Rp45.000.000 (Rp300.000)</p><p>Achievement 3 = Rp60.000.000 (Rp600.000)</p><p><strong>LEMBUR</strong> = Rp20.000</p><p>Perbulan max 10x Lembur (Bisa lebih - Menyesuaikan) = Rp200.000</p><p>&nbsp;</p><p><strong>PERHITUNGAN UPAH / GAJI (CONTOH)</strong> :</p><p>Payment Rp30,000,000 X 3% = Rp900,000</p><p>Total upah yang di dapat : Gaji pokok + Payment + Achieve 1 + lembur</p><p>Rp 1,300,000 + Rp 900,000 + Rp 100,000 + Rp 200,000 = Rp 2,500,000</p><p>&nbsp;</p><p>Payment Rp45,000,000 X 3% = Rp1,350,000</p><p>Total upah yang di dapat : Gaji pokok + Payment + Achieve 2 + lembur</p><p>Rp 1,300,000 + Rp 1,350,000 + Rp 300,000 + Rp 200,000 = Rp 3,150,000</p><p>&nbsp;</p><p>Payment Rp60,000,000 X 3% = Rp1,800,000</p><p>Total upah yang di dapat : Gaji pokok + Payment + Achieve 3 + lembur</p><p>Rp 1,300,000 + Rp 1,800,000 + Rp 600,000 + Rp 200,000 = Rp 3,900,000</p><p>&nbsp;</p><p><strong>NOTE :</strong> <strong>PAYMENT SESUAI (MENGIKUTI) YANG DIDAPATKAN DAN DIGAPA'I</strong></p><p>Contoh lainnya (Akumulasi payment dengan gaji pokok diatas 3 bulan bekerja)</p><p>&nbsp;</p><p>Payment Rp 70,000,000 X 3% = Rp 2,100,000</p><p>Total upah yang di dapat : Gaji pokok + Payment + Achieve 3 + lembur</p><p>Rp 1,500,000 + Rp 2,100,000 + Rp 600,000 + Rp 200,000 = Rp 4,400,000</p><p>&nbsp;</p><p>Payment Rp 85,000,000 X 3% = Rp 2,550,000</p><p>Total upah yang di dapat : Gaji pokok + Payment + Achieve 3 + lembur</p><p>Rp 1,500,000 + Rp 2,550,000 + Rp 600,000 + Rp 200,000 = Rp 4,850,000</p><p>&nbsp;</p><p>Payment Rp 100,000,000 X 3% = Rp 3,000,000</p><p>Total upah yang di dapat : Gaji pokok + Payment + Achieve 3 + lembur</p><p>Rp 1,500,000 + Rp 3,000,000 + Rp 600,000 + Rp 200,000 = Rp 5,300,000</p><p>&nbsp;</p><p><strong>FASILITAS</strong></p><p>DISEDIAKAN CATERING (KATERING) / KONSUMSI UNTUK MAKAN SIANG MAUPUN JAM LEMBUR</p>"
+            },
+            {
+                id: 17,
+                keywords: ['curhat', 'cerita'],
+                answer: "Kalo kamu ada masalah, atau ada perasaan gaenak, hubungi Team Leadermu, mereka baik kok, jangan malu. Ceritakan semuanya agar kamu mendapat solusi terbaik. Tenang mereka itu asik dan humble banget 😁"
+            },
+            {
+                id: 18,
+                keywords: ['kata kata hari ini', 'quote', 'kutipan'],
+                answer: "Kerja cerdas, bukan hanya kerja keras! Semangat untuk target hari ini! 🔥"
+            },
+            {
+                id: 19,
+                keywords: ['aturan', 'aturan perusahaan', 'peraturan perusahaan', 'SOP', 'SOP perusahaan'],
+                answer: "<p>Silakan lihat peraturan lengkap PT. Nusa Tiga Putra di sini: <a href=\"dokumen.pdf\" target=\"_blank\" download>Download PDF</a></p>"
+            },
+            {
+                id: 20,
+                keywords: ['deskcoll', 'deskcall','deskol', 'dc', 'desk collection'],
+                answer: "<p>Desk collection (atau disingkat deskcoll) adalah bagian dari proses penagihan piutang di mana petugas mengingatkan nasabah melalui telepon atau media lain untuk melakukan pembayaran yang jatuh tempo. Dalam agensi (Pihak ke-3), petugas Deskcoll wajib menjadi perantara atau jembatan penghubung antara pihak Kreditur & Debitur. Di mana yang dimaksud dalam hal ini adalah berhasil mendapatkan pembayaran (Payment) dari Debitur Macet, maka dari itu Petugas Deskcoll dinyatakan berhasil dalam tugasnya menjadi perantara atau petugas penagihan.</p><p>Deskcoll membutuhkan kemampuan komunikasi yang baik, negosiasi, manajemen emosi, dan manajemen waktu untuk mencapai target penagihan.</p><p>Deskcoll memiliki tugas utama untuk:</p><ul><li>Menginformasikan dan mengingatkan: nasabah tentang kewajiban pembayaran yang jatuh tempo.</li><li>Menagih piutang: melalui media telepon, email, surat, atau WhatsApp.</li><li>Melakukan pengecekan data nasabah: seperti jumlah pinjaman, tanggal pinjaman, dan tenggat pembayaran.</li><li>Membuat laporan: kepada manajemen tentang nasabah yang telah melunasi pinjaman.</li></ul>"
+            },
+            {
+                id: 21,
+                keywords: ['motivasi'],
+                answer: "Setiap pencapaian besar dimulai dari langkah kecil. Ingat tujuanmu dan terus bergerak maju! Kamu pasti bisa! 💪"
+            },
+            {
+                id: 22,
+                keywords:['kolektibilitas', 'kolektibilitas 1', 'kolektibilitas 2', 'kolektibilitas 3', 'kolektibilitas 4', 'kolektibilitas 5', 'kol', 'kol 1', 'kol 2', 'kol 3', 'kol 4', 'kol 5', 'nasabah macet', 'nasabah kolektibilitas'],
+                answer: "<p>Kolektibilitas (Bahasa Inggris: collectability) merupakan klasifikasi status keadaan pembayaran angsuran bunga atau angsuran pokok dan bunga kredit oleh debitur serta tingkat kemungkinan diterimanya kembali dana yang ditanamkan dalam surat-surat berharga atau penanaman lainnya. Menurut Otoritas Jasa Keuangan, kolektibilitas adalah keadaan pembayaran pokok atau angsuran pokok dan bunga kredit oleh nasabah serta tingkat kemungkinan diterimanya kembali dana yang ditanamkan.</p><p>Berdasarkan ketentuan Bank Indonesia, kolektibilitas dari suatu pinjaman dapat dikelompokkan dalam lima kelompok, yaitu lancar, dalam perhatian khusus (special mention), kurang lancar, diragukan, dan macet.</p><p>Status kolektibilitas dalam dunia perbankan diklasifikasikan menjadi lima status / lima kol (kolek) dari yang tertinggi hingga yang terendah yakni: (1) Kol-1 (LANCAR), (2) Kol-2 (DALAM PERHATIAN KHUSUS), (3) Kol-3 (KURANG LANCAR), (4) Kol-4 (DIRAGUKAN), dan (5) Kol-5 (MACET). Status Kol-1 sampai Kol-2 tergolong Performing Loan (PL) sedangkan Kol-3 sampai Kol-5 tergolong Non-Performing Loan (NPL). Sesuai dengan Peraturan OJK Nomor 40/POJK.03/2019, status kolektibilitas kredit dapat diuraikan sebagai berikut:</p><p><strong>Kol-1 (LANCAR)</strong></p><p>Kol-1 adalah status kolektibilitas tertinggi (Performing Loan) dimana riwayat pembayaran angsuran selalu tepat waktu atau sebelum jatuh tempo. Ini merepresentasikan karakter debitur yang baik.</p><p><strong>Kol-2 (DALAM PERHATIAN KHUSUS/DPK)</strong></p><p>Kol-2 adalah status untuk debitur yang terlambat membayar antara 1-90 hari dari tanggal jatuh tempo. Pada tahap ini, bank masih menganggapnya Performing Loan, namun sudah dianggap sebagai pertanda buruk dan memerlukan perhatian khusus.</p><p><strong>Kol-3 (KURANG LANCAR)</strong></p><p>Kol-3 adalah untuk debitur yang menunggak pembayaran antara 91-120 hari. Pada tahap ini, bank akan mengeluarkan Surat Peringatan (SP) Pertama dan mulai menghitung berbagai tunggakan. Restrukturisasi kredit masih mungkin dilakukan.</p><p><strong>Kol-4 (DIRAGUKAN)</strong></p><p>Kol-4 diberikan pada debitur yang menunggak antara 121-180 hari. Pada tahap ini, bank mulai bersiap untuk menyelesaikan kredit melalui pelelangan agunan sesuai aturan yang berlaku dan akan menerbitkan Surat Peringatan ke-2 dan ke-3.</p><p><strong>Kol-5 (MACET)</strong></p><p>Kol-5 atau Kredit Macet adalah status terendah (Non-Performing Loan) untuk tunggakan lebih dari 180 hari. Bank wajib menyelesaikan kredit ini, biasanya melalui pelelangan agunan untuk menutupi kerugian.</p>"
+            },
+            {
+                id: 23,
+                keywords:['koleksyen', 'collection', 'kolecsyen', ],
+                answer: "<strong>COLLECTION</strong> : Bagian dari pengelolaan utang-piutang yang macet atau tertunggak. Dalam pekerjaan ini, collection diartikan sebagai jembatan atau penghubung antara dua pihak, yaitu pihak kreditur dan debitur."
+            },
+            {
+                id: 24,
+                keywords:['kreditur'],
+                answer: "<strong>KREDITUR</strong> : Pihak yang memberi permodalan atau pendanaan kepada peminjam, atau bisa diartikan sebagai instansi (misalnya perbankan) yang melakukan aktivitas simpan pinjam."
+            },
+            {
+                id: 25,
+                keywords:['debitur', 'peminjam', 'peminjem'],
+                answer: "<strong>DEBITUR / PEMINJAM</strong> : Nasabah atau pengguna layanan atau produk yang diberikan pihak kreditur (misalnya instansi perbankan)."
+            },
+            {
+                id: 26,
+                keywords:['proses hutang','proses piutang','proses utang piutang'],
+                answer: "<p>Aktivitas utang-piutang terjadi karena adanya kegiatan pinjam meminjam antara kedua belah pihak:</p><ul><li>Pihak pertama: kreditur (pemberi pinjaman).</li><li>Pihak kedua: debitur (penerima pinjaman).</li></ul><p>Ketika aktivitas pinjam meminjam dilakukan, terjadilah yang namanya perjanjian atau kontrak peminjaman. Ketika perjanjian ini sudah dibuat, artinya pinjaman tersebut sudah sah secara administrasi di mata hukum.</p><p>Semua kegiatan pinjam meminjam dilandasi dengan perjanjian yang telah disetujui oleh kedua belah pihak. Dalam perjanjian tersebut sudah diatur mengenai biaya bunga beserta denda keterlambatan apabila tidak membayar sesuai tenor pinjaman.</p>"
+            },
+            {
+                id: 27,
+                keywords:['slik', 'slik ojk', 'ojk slik'],
+                answer: "Slik OJK adalah sebuah catatan atau riwayat pinjam meminjam yang dibuat oleh OJK untuk setiap individu yang menggunakan jasa perbankan maupun non-perbankan dalam basis keuangan. Jadi, segala jenis aktivitas pinjam meminjam kita tercatat rekam jejaknya di Slik OJK."
+            },
+            {
+                id: 28,
+                keywords: ['ojk'],
+                answer: "OJK adalah Otoritas Jasa Keuangan yang berfungsi untuk mengawasi dan menaungi sektor perbankan maupun non-perbankan di bidang ekonomi. Pihak yang diawasi mencakup bank, instansi keuangan lain, para nasabah (debitur), bahkan pihak ketiga seperti agensi collection. Semua aturan tentang perbankan, penagihan, dan keuangan dilandasi oleh peraturan yang telah dibuat oleh OJK."
+            },
+            
+            // BNI Team Pairs
+            {
+                id: 29,
+                keywords: ["fokus data bni", "prioritas penanganan bni", "penagihan bni vs mba", "data harian bni"],
+                answer: "<p><strong>Fokus Pekerjaan Berdasarkan Data yang Diterima</strong></p>\n<ol>\n<li>Jika hari ini Anda menerima data <strong>MBA</strong>, maka fokuskan peneleponan dan follow-up pada akun-akun MBA.</li>\n<li>Jika besok Anda mendapatkan data <strong>BNI</strong>, maka gantilah fokus pekerjaan Anda untuk menangani akun-akun BNI.</li>\n<li>Jika Anda memiliki data gabungan, pilih salah satu sesuai prioritas atau beban kerja harian.</li>\n<li>Pastikan semua Card Holder (Nasabah) yang ditugaskan tetap terinformasi tagihannya, baik dari data MBA maupun BNI. </li>\n</ol>",
+                teams: ['bni']
+            },
+            {
+                id: 30,
+                keywords: ["cara bayar kartu kredit bni", "metode pembayaran bni", "bayar tagihan kartu kredit bni"],
+                answer: "<p><strong>Tata Cara Pembayaran Kartu Kredit Melalui ATM BNI</strong></p>\n<ol>\n<li>Masukkan kartu debit BNI dan PIN Anda ke mesin ATM BNI.</li>\n<li>Pilih menu <strong>Menu Lain → Pembayaran → Kartu Kredit</strong>.</li>\n<li>Pilih <strong>Kartu Kredit BNI</strong> sebagai penerbit kartu.</li>\n<li>Masukkan 16 digit nomor kartu kredit BNI Anda.</li>\n<li>Masukkan jumlah pembayaran (minimal sesuai dengan tagihan minimum).</li>\n<li>Konfirmasi transaksi dan simpan bukti pembayaran sebagai arsip.</li>\n</ol>",
+                teams: ['bni']
+            },
+            {
+                id: 31,
+                keywords: ["mobile banking bni", "aplikasi bni mobile", "bayar tagihan lewat hp"],
+                answer: "<p><strong>Tata Cara Pembayaran Kartu Kredit Melalui Mobile Banking BNI (BNI Mobile)</strong></p>\n<ol>\n<li>Login ke aplikasi <strong>BNI Mobile Banking</strong> menggunakan akun Anda.</li>\n<li>Pilih menu <strong>Pembayaran → Kartu Kredit</strong>.</li>\n<li>Pilih <strong>BNI</strong> sebagai penerbit kartu kredit.</li>\n<li>Masukkan nomor kartu kredit dan jumlah pembayaran yang ingin Anda bayarkan.</li>\n<li>Konfirmasi transaksi dan masukkan <strong>MPIN</strong> untuk melanjutkan pembayaran.</li>\n</ol>",
+                teams: ['bni']
+            },
+            {
+                id: 32,
+                keywords: ["internet banking bni", "tagihan kartu kredit online", "transaksi online bni"],
+                answer: "<p><strong>Tata Cara Pembayaran Kartu Kredit Melalui Internet Banking BNI</strong></p>\n<ol>\n<li>Login ke <strong>BNI Internet Banking</strong> menggunakan akun Anda.</li>\n<li>Pilih menu <strong>Transaksi → Pembayaran Tagihan → Kartu Kredit</strong>.</li>\n<li>Pilih kartu kredit BNI yang akan dibayarkan tagihannya.</li>\n<li>Masukkan jumlah pembayaran sesuai nominal tagihan atau lebih.</li>\n<li>Konfirmasi transaksi dan simpan bukti pembayaran sebagai arsip.</li>\n</ol>",
+                teams: ['bni']
+            },
+            {
+                id: 33,
+                keywords: ["tentang bank bni", "profil bank bni", "kartu kredit bni"],
+                answer: "<p><strong>BNI</strong> merupakan salah satu bank milik pemerintah (<strong>BUMN</strong>) di Indonesia. <strong>Kartu kredit BNI</strong> adalah alat pembayaran berbentuk kartu yang diterbitkan oleh BNI kepada nasabah, yang dapat digunakan untuk berbelanja, membayar tagihan, tarik tunai, atau transaksi online, dengan sistem pembayaran ditangguhkan hingga tanggal jatuh tempo.</p>",
+                teams: ['bni']
+            },
+            {
+                id: 34,
+                keywords: ["fungsi kartu kredit bni", "manfaat kartu kredit bni"],
+                answer: "<p><strong>Fungsi Kartu Kredit BNI:</strong></p>\n<ol>\n<li>Alat pembayaran praktis (belanja offline & online).</li>\n<li>Penarikan tunai di ATM (dengan bunga dan biaya).</li>\n<li>Cicilan tetap untuk pembelian barang.</li>\n<li>Fasilitas diskon & promo di merchant tertentu.</li>\n<li>Poin reward setiap transaksi yang bisa ditukar dengan hadiah.</li>\n</ol>",
+                teams: ['bni']
+            },
+            {
+                id: 35,
+                keywords: ["jenis kartu bni", "tipe kartu bni", "kartu bni silver gold platinum", "kartu visa mastercard jcb garuda style lottemart"],
+                answer: "<p><strong>Jenis Kartu Kredit BNI:</strong></p>\n<table border=\"1\">\n<thead>\n<tr>\n<th>Jenis Kartu</th>\n<th>Fitur Utama</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td><strong>BNI Silver</strong></td>\n<td>Limit rendah</td>\n</tr>\n<tr>\n<td><strong>BNI Gold</strong></td>\n<td>Limit menengah</td>\n</tr>\n<tr>\n<td><strong>BNI Platinum</strong></td>\n<td>Limit tinggi</td>\n</tr>\n<tr>\n<td><strong>BNI Visa/MasterCard</strong></td>\n<td>Diterima secara global di seluruh jaringan Visa/MasterCard</td>\n</tr>\n<tr>\n<td><strong>BNI JCB Precious</strong></td>\n<td>Khusus untuk wisatawan Asia dengan banyak manfaat eksklusif</td>\n</tr>\n<tr>\n<td><strong>BNI Garuda</strong></td>\n<td>Dapat miles Garuda Indonesia setiap transaksi</td>\n</tr>\n<tr>\n<td><strong>BNI Style Titanium</strong></td>\n<td>Untuk kalangan muda, banyak promo lifestyle & kuliner</td>\n</tr>\n<tr>\n<td><strong>BNI Batik Air</strong></td>\n<td>Manfaat tambahan untuk traveler loyal Batik Air</td>\n</tr>\n<tr>\n<td><strong>BNI LotteMart</strong></td>\n<td>Cashback & diskon ekstra saat belanja di LotteMart</td>\n</tr>\n</tbody>\n</table>",
+                teams: ['bni']
+            },
+            {
+                id: 36,
+                keywords: ["apa itu mba consult", "profil perusahaan mba", "konsultan mba"],
+                answer: "<p><strong>Apa itu MBA Consult?</strong></p>\n<p><strong>MBA Consult</strong> tidak memiliki kepanjangan resmi yang dipublikasikan oleh Perusahaan, akan tetapi MBA adalah nama perusahaan yang digunakan secara global.</p>",
+                teams: ['bni']
+            },
+            {
+                id: 37,
+                keywords: ["portofolio mba consult", "home credit", "maucash", "cashwagon"],
+                answer: "<p><strong>Portofolio MBA Consult:</strong></p>\n<ul>\n<li><strong>Home Credit</strong>: Fokus pada pembiayaan gadget, elektronik, pinjaman tunai, dan PayLater.</li>\n<li><strong>Maucash</strong>: Layanan pinjaman tunai dan PayLater via AstraPay yang diawasi OJK.</li>\n<li><strong>Cashwagon</strong>: Layanan pinjaman online ilegal (izin dicabut OJK).</li>\n</ul>",
+                teams: ['bni']
+            },
+            {
+                id: 38,
+                keywords: ["negosiasi dengan ch", "ch sulit nego", "solusi negosiasi gagal"],
+                answer: "<p><strong>Strategi Negosiasi dengan Nasabah (CH):</strong></p>\n<ol>\n<li>Identifikasi alasan CH menolak negosiasi — apakah karena kesulitan finansial atau sikap menghindar.</li>\n<li>Jika CH mampu tapi enggan, manfaatkan tracing kantor/keluarga untuk tekanan halus.</li>\n<li>Jika CH benar-benar tidak mampu, tawarkan skema pelunasan bertahap atau restrukturisasi.</li>\n<li>Sampaikan risiko hukum dan blacklisting jika tidak ada itikad baik.</li>\n</ol>",
+                teams: ['bni']
+            },
+            {
+                id: 39,
+                keywords: ["penagihan baru", "nasabah protes", "hutang baru ditagih"],
+                answer: "<p><strong>Bagaimana ketika nasabah mempermasalahkan hutang yang baru ditagih?</strong></p>\n<p>Ketika nasabah mempermasalahkan terkait penagihan yang baru dilakukan saat ini kita bisa sampaikan bahwa nasabah tidak cuma satu dan terbatasnya staff penagihan, selain itu perlu disampaikan juga bahwa seharusnya nasabah/CH lah yang harus konfirmasi kepada pihak kreditur sebagai debitur yang baik dan sadar akan kewajibannya.</p>\n<p>Perlu ditegaskan juga bahwa selama tidak ada penagihan bukan berarti hutang nasabah tersebut lunas melainkan tagihan tetap berlaku sampai kapan pun.</p>",
+                teams: ['bni']
+            },
+            {
+                id: 40,
+                keywords: ["nasabah tidak merespon", "tidak ada respons ch", "ch tidak menjawab telepon"],
+                answer: "<p><strong>Cara Menangani Nasabah yang Tidak Merespons:</strong></p>\n<ol>\n<li>Coba hubungi menggunakan nomor cadangan atau keluarga/narahubung.</li>\n<li>HUBUNGI tempat kerja nasabah untuk meminta informasi keberadaan mereka.</li>\n<li>Kirim surat somasi/peringatan jika komunikasi tidak berhasil.</li>\n<li>Jika semua cara gagal, lanjutkan ke akun lain guna efisiensi waktu.</li>\n</ol>",
+                teams: ['bni']
+            },
+            {
+                id: 41,
+                keywords: ["kontak kantor ch", "telepon tempat kerja", "cara telpon kantor nasabah"],
+                answer: "<p><strong>Bagaimana cara menghubungi kantor nasabah?</strong></p>\n<p>Cara menghubungi tempat kerja nasabah agar disambungkan dengan nasabahnya bisa minta untuk disambungkan langsung dengan yang bersangkutan lewat CS (Customer Service). Sebelum kita konfirmasi kita juga harus paham jobdesk bagian staff yang mengangkat telpon misal Customer Service salah satu tugasnya yaitu:</p>\n<ol>\n<li>Melayani pelanggan,</li>\n<li>Memberikan informasi,</li>\n<li>Menyambungkan telepon orang yang berkepentingan kepada orang yang bersangkutan.</li>\n</ol>\n<p>Dengan kita mengetahui jobdesk CS tersebut berarti tidak ada alasan untuk CS menolak ketika kita minta disambungkan. Bila perlu kita push CS-nya dengan memberikan pemahaman tersebut mengenai tugas dia sebagai Customer Service.</p>",
+                teams: ['bni']
+            },
+            {
+                id: 42,
+                keywords: ["komunikasi dengan nasabah", "cara bicara dengan ch", "strategi percakapan"],
+                answer: "<p><strong>Strategi Efektif Komunikasi dengan Nasabah (CH):</strong></p>\n<ul>\n<li><strong>Formal</strong>: Gunakan greeting → perkenalan → validasi → konfirmasi tagihan → negosiasi.</li>\n<li><strong>Non-formal</strong>: Mulai dengan basa-basi, tanya kabar, lalu arahkan ke pembayaran.</li>\n</ul>",
+                teams: ['bni']
+            },
+            {
+                id: 43,
+                keywords: ["nasabah finance", "debitur bidang keuangan", "finance officer"],
+                answer: "<p><strong>Apa yang harus disampaikan ketika kita ketemu nasabah yang bekerja di bagian finance?</strong></p>\n<p>Menangani nasabah yang bekerja di bidang finance, justru apa yang mereka tau tentang pekerjaan di bidang finance itu bisa jadi senjata untuk kita, dimana tentunya mereka bisa tau lebih dulu terkait konsekuensi nasabah yang menunggak atau macet.</p>\n<p>Contoh konsekuensi:</p>\n<ul>\n<li>Denda dan bunga keterlambatan.</li>\n<li>Nama terblacklist.</li>\n<li>Kerugian lainnya.</li>\n</ul>\n<p>Maka dari itu kita bisa sampaikan bahwa nasabah tersebut lebih tau dan seharusnya nasabah tersebut tidak boleh menunggak dan karena sudah terjadi kemacetan maka nasabah tersebut tidak ada alasan untuk tidak menerima konsekuensinya.</p>",
+                teams: ['bni']
+            },
+            {
+                id: 44,
+                keywords: ["nasabah tidak respon", "no response", "tidak ada kontak ch"],
+                answer: "<p><strong>Apa yang harus dilakukan ketika nasabah tidak merespon?</strong></p>\n<p>Untuk menangani nasabah yang tidak ada respon sedangkan sudah kita lakukan berbagai cara seperti menghubungi kantor, keluarga dan kerabat lainnya bahkan sudah kita kasih surat peringatan atau somasi akan tetapi nasabahnya tidak ada respon. Ya apalah daya kita mau berbuat apa selain cari nasabah yang lain. Jangan buang-buang waktu dong Kawan!!!!! Masih banyak kok nasabah yang mau bayar tinggal gimana kita-nya aja sudah berapa banyak kita mencari dan menghubungi nasabah?</p>",
+                teams: ['bni']
+            },
+            {
+                id: 45,
+                keywords: ["waktu report dan collect", "atur waktu kerja", "manajemen waktu deskcoll"],
+                answer: "<p><strong>Manajemen Waktu Report dan Collect:</strong></p>\n<ul>\n<li>Report dilakukan segera setelah diminta, tanpa ditunda.</li>\n<li>Collect dapat dilakukan sepanjang jam kerja, prioritas pada waktu produktif (pagi-siang).</li>\n<li>Jangan pisahkan waktu report dan collect, namun prioritaskan report agar tidak mengganggu fokus collect.</li>\n</ul>",
+                teams: ['bni']
+            },
+            {
+                id: 46,
+                keywords: ["manage multiple portfolio", "kelola dua portofolio", "prioritas collection bni mba"],
+                answer: "<p><strong>Cara Mengelola Dua Portofolio Secara Efektif:</strong></p>\n<ul>\n<li>Fokus pada data yang diterima hari itu (BNI hari ini, MBA besok).</li>\n<li>Jika ada data gabungan, pilih satu sesuai prioritas atau beban kerja.</li>\n<li>Pastikan semua Card Holder tersentuh komunikasi, baik dari data MBA maupun BNI. </li>\n</ul>",
+                teams: ['bni']
+            },
+            {
+                id: 47,
+                keywords: ["cara pembayaran kartu kredit bni", "metode bayar bni", "bayar tagihan bni"],
+                answer: "<p><strong>Metode Pembayaran Kartu Kredit BNI:</strong></p>\n<h4>1. Melalui ATM BNI</h4>\n<ol>\n<li>Masukkan kartu debit dan PIN BNI Anda.</li>\n<li>Pilih menu <strong>Lainnya → Pembayaran → Kartu Kredit</strong>.</li>\n<li>Pilih penerbit <strong>Kartu Kredit BNI</strong>.</li>\n<li>Masukkan 16 digit nomor kartu kredit.</li>\n<li>Masukkan jumlah pembayaran (minimal sesuai tagihan).</li>\n<li>Konfirmasi transaksi dan simpan bukti pembayaran.</li>\n</ol>\n<h4>2. Mobile Banking BNI (BNI Mobile)</h4>\n<ol>\n<li>Login ke aplikasi <strong>BNI Mobile</strong>.</li>\n<li>Pilih menu <strong>Pembayaran → Kartu Kredit</strong>.</li>\n<li>Pilih <strong>BNI</strong> sebagai penerbit.</li>\n<li>Masukkan nomor kartu dan nominal pembayaran.</li>\n<li>Konfirmasi dengan MPIN.</li>\n</ol>\n<h4>3. Internet Banking BNI</h4>\n<ol>\n<li>Login ke <strong>BNI Internet Banking</strong>.</li>\n<li>Pilih menu <strong>Transaksi → Pembayaran Tagihan → Kartu Kredit</strong>.</li>\n<li>Pilih kartu kredit BNI.</li>\n<li>Masukkan jumlah pembayaran dan konfirmasi.</li>\n</ol>\n<h4>4. Autodebet Rekening Tabungan BNI</h4>\n<p>Daftarkan autodebet dari rekening tabungan BNI melalui CS atau formulir di cabang terdekat.</p>\n<h4>5. Transfer dari Bank Lain</h4>\n<ul>\n<li>Tujuan Bank: BNI</li>\n<li>Nomor Rekening: 16 digit nomor kartu kredit</li>\n<li>Nama Penerima: Sesuai nama di kartu</li>\n<li>Berita: Pembayaran Kartu Kredit</li>\n</ul>\n<h4>6. Teller BNI</h4>\n<p>Datangi langsung kantor cabang BNI terdekat dengan membawa kartu kredit dan uang tunai sesuai tagihan.</p>",
+                teams: ['bni']
+            },
+            // Collectius Team Pairs
+            {
+                id: 48,
+                keywords: ["cara cepat respon nasabah", "respon nasabah", "menarik perhatian ch", "komunikasi efektif dengan ch"],
+                answer: "<p><strong>1. Membuat Nasabah Penasaran</strong></p>\n<ul>\n<li>Gunakan kalimat tanya atau sapaan akrab seolah sudah kenal.</li>\n</ul>\n<p><strong>Contoh Kalimat:</strong></p>\n<ol>\n<li>\"Ibu/Bapak [nama CH], saya kemarin ke rumah tapi tidak ada orang.\"</li>\n<li>\"Ibu/Bapak [nama CH], anaknya ([nama anak CH]) kemarin ada masalah. Saya mau info keributan yang dibuatnya.\"</li>\n<li>\"Assalamualaikum Ibu/Bapak [nama CH], apa kabar? Sudah lama tak berjumpa. Semoga masih sehat?\"</li>\n</ol>\n<p><strong>2. Menekankan Pentingnya Kewajiban dari Sisi Religius</strong></p>\n<ul>\n<li>Arahkan pembicaraan ke tanggung jawab agama.</li>\n</ul>\n<p><strong>Contoh Kalimat:</strong></p>\n<ol>\n<li>\"Ibu/Bapak, dari segi agama, kewajiban tagihan harus diselesaikan dalam kondisi apa pun.\"</li>\n<li>\"Ingat, dalam ayat suci, dosa yang tidak terampuni adalah masalah hutang.\"</li>\n<li>\"Saya yakin Ibu/Bapak [nama CH] punya hati nurani untuk menyelesaikan tagihan. Kita tidak tahu kapan rezeki, musibah, atau ajal datang.\"</li>\n</ol>",
+                teams: ["collectius"]
+            },
+            {
+                id: 49,
+                keywords: ["nasabah blokir redaksi", "penanganan blokir ch", "kirim redaksi ke ch", "kontak ch sebelum redaksi"],
+                answer: "<p>a. Pastikan nasabah sudah dihubungi terlebih dahulu via X-Lite atau WhatsApp sebelum mengirim redaksi.</p>\n<p>b. Berikan pemberitahuan bahwa redaksi akan dikirim agar nasabah tidak kaget dan memblokir.</p>\n<p>c. Konfirmasi semua pihak terkait nasabah (kantor, rumah, anak, rekan kerja, keluarga) melalui media sosial (IG, FB, LinkedIn) sebelum mengirim redaksi.</p>",
+                teams: ["collectius"]
+            },
+            {
+                id: 50,
+                keywords: ["collectius", "collectius asset management", "debt collector collectius", "perusahaan penagihan utang", "legalitas collectius", "fungsi collectius"],
+                answer: "<p><strong>Collectius Asset Management</strong></p>\n<p>Collectius telah beroperasi di Indonesia sejak beberapa tahun terakhir dan menjadi salah satu pemain utama dalam pengelolaan kredit bermasalah (NPL) dan penagihan utang. Berikut detail operasinya:</p>\n\n<p><strong>1. Legalitas & Regulasi di Indonesia</strong></p>\n<ul>\n<li><strong>PT Collectius Indonesia:</strong> Entitas resmi terdaftar di Indonesia.</li>\n<li><strong>Izin OJK:</strong> Harus patuh pada POJK No. 18/2019 dan aturan perlindungan konsumen.</li>\n<li><strong>Kemitraan:</strong> Banyak bekerja sama dengan bank, multifinance, dan fintech.</li>\n</ul>\n\n<p><strong>2. Fokus Bisnis di Indonesia</strong></p>\n<ul>\n<li><strong>Kredit Konsumen Bermasalah</strong></li>\n<li><strong>Pembiayaan Multifinance</strong></li>\n<li><strong>Pinjaman Fintech (Pinjol)</strong></li>\n<li><strong>Kredit Usaha Kecil & Korporasi</strong></li>\n</ul>\n\n<p><strong>3. Strategi Operasional</strong></p>\n<ul>\n<li><strong>Digital Collection:</strong> SMS, WA, email, telepon otomatis.</li>\n<li><strong>Analisis Data & AI:</strong> Prioritas penagihan berdasarkan profil debitur.</li>\n<li><strong>Human-Centered Approach:</strong> Tawarkan restrukturisasi atau negosiasi lunak.</li>\n</ul>\n\n<p><strong>4. Proses Penagihan</strong></p>\n<ol>\n<li><strong>Soft Collection:</strong> SMS/email/telpon + negosiasi.</li>\n<li><strong>Field Collection:</strong> Kunjungan lapangan jika diperlukan.</li>\n<li><strong>Restrukturisasi:</strong> Diskon pelunasan atau cicilan ulang.</li>\n</ol>\n\n<p><strong>Catatan:</strong> Dilarang ancam/intimidasi sesuai aturan OJK.</p>\n\n<p><strong>5. Kontroversi</strong></p>\n<ul>\n<li>SMS/telepon terlalu sering.</li>\n<li>Kesalahan data atau pelanggaran privasi.</li>\n</ul>\n\n<p><strong>6. Keunggulan Collectius</strong></p>\n<ul>\n<li>Berbasis teknologi</li>\n<li>Kemitraan besar</li>\n<li>Kepatuhan hukum tinggi</li>\n</ul>\n\n<p><strong>7. Jika Terlibat dengan Collectius?</strong></p>\n<ol>\n<li>Minta detail utang.</li>\n<li>Negosiasi cicilan/diskon.</li>\n<li>Lapor ke OJK jika ada pelanggaran.</li>\n</ol>\n\n<p><strong>Kesimpulan</strong>: Collectius profesional, tetapi nasabah tetap punya hak untuk verifikasi dan protes jika merasa dirugikan.</p>",
+                teams: ["collectius"]
+            },
+            {
+                id: 51,
+                keywords: ["maybank", "pengalihan maybank ke collectius", "kenapa maybank ke collectius", "legalitas collectius maybank"],
+                answer: "<p><strong>MAYBANK</strong></p>\n<p>Maybank memindahkan tagihan nasabah macet ke <strong>Collectius</strong> karena Collectius ahli dalam penagihan utang. Maybank ingin fokus pada layanan perbankan, sedangkan Collectius bertugas mengejar nasabah yang belum bayar.</p>\n\n<p><strong>Detail + Tahun Peralihan:</strong></p>\n<ol>\n<li><strong>Kapan Mulai?</strong>\n<ul>\n<li>Kerja sama sejak <strong>2018</strong>, tapi bisa terjadi setiap saat.</li>\n</ul>\n</li>\n<li><strong>Kenapa Pindah ke Collectius?</strong>\n<ul>\n<li>Collectius spesialis penagihan.</li>\n<li>Biaya lebih murah.</li>\n<li>Tidak ganggu nasabah aktif.</li>\n</ul>\n</li>\n<li><strong>Apakah Legal?</strong>\n<ul>\n<li>Iya, selama ada klausul alih penagihan di kontrak awal.</li>\n<li>Collectius dilarang intimidasi sesuai POJK No. 6/2021.</li>\n</ul>\n</li>\n<li><strong>Nasabah Harus Apa?</strong>\n<ul>\n<li>Verifikasi ke Maybank langsung.</li>\n<li>Negosiasi jika tidak mampu bayar.</li>\n<li>Jangan abaikan karena bisa kena SLIK OJK.</li>\n</ul>\n</li>\n</ol>",
+                teams: ["collectius"]
+            },
+            {
+                id: 52,
+                keywords: ["danamon collectius", "data dipindah ke collectius", "kenapa danamon ke collectius", "legalitas collectius danamon"],
+                answer: "<p><strong>DANAMON</strong></p>\n<p>Pada <strong>2019</strong>, Danamon menyerahkan data nasabah NPL (Non-Performing Loan) ke <strong>Collectius – debt collector profesional</strong>.</p>\n\n<p><strong>Alasan Utama:</strong></p>\n<ol>\n<li><strong>Penagihan Lebih Efektif</strong></li>\n<li><strong>Kepatuhan Regulasi OJK</strong></li>\n</ol>\n\n<p><strong>Detail Peralihan 2019:</strong></p>\n<ul>\n<li><strong>NPL (Non-Performing Loan):</strong> Kredit macet > 180 hari.</li>\n<li><strong>Data yang Dipindah:</strong> Hanya nasabah status NPL.</li>\n<li><strong>Peran Collectius:</strong> Hubungi nasabah, negosiasi pembayaran.</li>\n<li><strong>Kendali Tetap di Danamon</strong></li>\n</ul>",
+                teams: ["collectius"]
+            },
+            {
+                id: 53,
+                keywords: ["home credit collectius", "hci collectius", "data hci ke collectius", "kenapa hci ke collectius", "legalitas collectius hci"],
+                answer: "<p><strong>Home Credit Indonesia (HCI)</strong>: Perusahaan pembiayaan konsumen.</p>\n<p><strong>Collectius:</strong> Debt collector berbasis Singapura, beroperasi di Asia termasuk Indonesia.</p>\n\n<p><strong>Alasan Pengalihan Data</strong></p>\n<ol>\n<li><strong>Fokus Bisnis Berbeda</strong>\n<ul>\n<li>HCI fokus pinjamkan uang.</li>\n<li>Collectius fokus tagih utang.</li>\n</ul>\n</li>\n<li><strong>Kepatuhan Regulasi</strong>\n<ul>\n<li>Harus beri pemberitahuan resmi.</li>\n<li>Data dilindungi UU Privasi.</li>\n<li>Proses harus etis.</li>\n</ul>\n</li>\n</ol>\n\n<p><strong>Waktu Peralihan:</strong> <strong>2020–2021</p>\n\n<p><strong>Dampak bagi Nasabah:</strong></p>\n<ul>\n<li>Utang tetap berlaku, hanya penagih berubah.</li>\n<li>Bisa nego diskon pelunasan.</li>\n<li>Jika ada spam/ancaman → lapor OJK.</li>\n</ul>\n\n<p><strong>Kesimpulan</strong>: Pengalihan sah, asal sesuai regulasi OJK dan UU Perlindungan Data.</p>",
+                teams: ["collectius"]
+            },
+            {
+                id: 54,
+                keywords: ["permata collectius", "tagihan permata ke collectius", "kenapa permata ke collectius", "legalitas collectius permata"],
+                answer: "<p><strong>PERMATA</strong></p>\n<p>Bank Permata mulai bekerja sama dengan Collectius sekitar <strong>2019–2020</strong> untuk menangani kredit macet.</p>\n\n<p><strong>Kenapa Bank Permata Lakukan Ini?</strong></p>\n<ol>\n<li><strong>Fokus pada bisnis utama</strong> – Bank lebih prioritaskan nasabah aktif.</li>\n<li><strong>Efisiensi</strong> – Collectius punya tim khusus.</li>\n<li><strong>Aturan perbankan</strong> – Boleh alihkan tagihan ke pihak ketiga legal.</li>\n</ol>",
+                teams: ["collectius"]
+            },
+            {
+                id: 55,
+                keywords: ["kta", "kredit tanpa agunan", "definisi kta", "keuntungan kta", "jenis kta", "pinjaman tanpa jaminan"],
+                answer: "<p><strong>KTA (Kredit Tanpa Agunan)</strong> adalah pinjaman dari bank atau lembaga keuangan yang <strong>tidak butuh jaminan</strong>. Cocok untuk:</p>\n<ul>\n<li>Dana darurat</li>\n<li>Biaya pernikahan</li>\n<li>Renovasi rumah</li>\n<li>Modal usaha kecil</li>\n</ul>\n\n<p><strong>Ciri KTA:</strong></p>\n<ol>\n<li><strong>Tanpa agunan</strong> → Tidak butuh barang jaminan.</li>\n<li><strong>Proses cepat</strong> → Persetujuan lebih cepat.</li>\n<li><strong>Bunga tinggi</strong> → Risiko bank besar.</li>\n<li><strong>Limit terbatas</strong> → Biasanya Rp5 juta - Rp500 juta.</li>\n</ol>\n\n<p><strong>Contoh:</strong> Pinjam Rp50 juta untuk modal usaha, lunasi 3 tahun + bunga.</p>\n\n<p><strong>Perhatian:</strong> Cicilan jangan memberatkan pendapatan bulanan.</p>\n\n<p>Singkatnya, KTA itu pinjaman cepat tanpa jaminan.</p>",
+                teams: ["collectius"]
+            },
+            {
+                id: 56,
+                keywords: ["kartu kredit", "definisi kartu kredit", "cara kerja kartu kredit", "limit kartu kredit", "tagihan kartu kredit"],
+                answer: "<p><strong>Kartu Kredit:</strong> Alat belanja sekarang bayar nanti.</p>\n\n<ol>\n<li><strong>Batas Limit:</strong> Contoh: Rp10 juta.</li>\n<li><strong>Belanja/Bayar:</strong> Bisa tarik tunai (ada biaya).</li>\n<li><strong>Tagihan Bulanan:</strong> Lunas sebelum jatuh tempo → tanpa bunga.</li>\n<li><strong>Cicilan:</strong> Ada bunga.</li>\n</ol>",
+                teams: ["collectius"]
+            },
+            {
+                id: 57,
+                keywords: ["jenis kartu kredit", "cc danamon", "cc permata", "cc maybank", "credit card bank besar"],
+                answer: "<p><strong>JENIS CC (Credit Card) PermataBank, Bank Danamon, dan Maybank</strong></p>\n\n<p><strong>1. PermataBank</strong></p>\n<ul>\n<li><strong>Permata Mastercard Classic:</strong> Rewards dasar, limit standar.</li>\n<li><strong>Permata Visa Platinum:</strong> Akses lounge, promo eksklusif.</li>\n<li><strong>Contoh nomor kontrak:</strong> 1234-5678-9012-3456 (contoh saja).</li>\n</ul>\n\n<p><strong>2. Bank Danamon</strong></p>\n<ul>\n<li><strong>Danamon Visa Classic:</strong> Cashback belanja & bensin.</li>\n<li><strong>Danamon Mastercard Gold:</strong> Promo merchant, limit besar.</li>\n<li><strong>Contoh nomor kontrak:</strong> 2345-6789-0123-4567.</li>\n</ul>\n\n<p><strong>3. Maybank</strong></p>\n<ul>\n<li><strong>Maybank Visa Gold:</strong> Rewards & diskon travel.</li>\n<li><strong>Maybank 2 Cards Platinum:</strong> Double benefits (Visa + Amex).</li>\n<li><strong>Contoh nomor kontrak:</strong> 3456-7890-1234-5678.</li>\n</ul>",
+                teams: ["collectius"]
+            },
+            {
+                id: 58,
+                keywords: ["cash loan", "personal loan", "cash loan vs personal loan", "pinjaman di hci", "home credit indonesia"],
+                answer: "<p><strong>Cash Loan dan Personal Loan di Home Credit Indonesia (HCI)</strong></p>\n\n<p><strong>1. Cash Loan</strong></p>\n<ul>\n<li><strong>Untuk apa?</strong> Dana cepat (biaya sekolah, tagihan, dll).</li>\n<li><strong>Jumlah:</strong> Rp5–20 juta.</li>\n<li><strong>Waktu:</strong> 3–12 bulan.</li>\n<li><strong>Syarat:</strong> Mudah (KTP + bukti penghasilan).</li>\n<li><strong>Bunga:</strong> Tinggi (tanpa jaminan).</li>\n</ul>\n\n<p><strong>2. Personal Loan</strong></p>\n<ul>\n<li><strong>Untuk apa?</strong> Modal usaha, renovasi rumah.</li>\n<li><strong>Jumlah:</strong> Rp10–100 juta.</li>\n<li><strong>Waktu:</strong> 1–5 tahun.</li>\n<li><strong>Syarat:</strong> Lebih ketat (cek riwayat kredit).</li>\n<li><strong>Bunga:</strong> Lebih rendah dari cash loan.</li>\n</ul>\n\n<p><strong>Perbedaan Singkat:</strong></p>\n<ul>\n<li><strong>Cash Loan</strong> = Dana kecil, cepat, bunga tinggi.</li>\n<li><strong>Personal Loan</strong> = Dana besar, cicilan panjang, bunga lebih rendah.</li>\n</ul>",
+                teams: ["collectius"]
+            },
+            {
+                id: 59,
+                keywords: ["tracing", "tracing ch", "tracing kantor", "tracing nonik", "penelusuran data nasabah"],
+                answer: "<p><strong>Urutan Tracing (Penelusuran) Nasabah</strong></p>\n\n<ol>\n<li><strong>Tracing 1 CH</strong> – Cari kontak pertama (CH).</li>\n<li><strong>Tracing Kantor</strong> – Cari via tempat kerja.</li>\n<li><strong>Tracing Tambahan</strong> – Cari nomor baru hasil tracing kantor.</li>\n<li><strong>Tracing Nonik 1</strong> – Cari via iklan lowongan.</li>\n<li><strong>Tracing Nonik 2</strong> – Cari tambahan data.</li>\n<li><strong>Tracing Khusus</strong> – Cari alamat/nomor baru.</li>\n</ol>",
+                teams: ["collectius"]
+            },
+            {
+                id: 60,
+                keywords: ["cara pembayaran", "virtual account", "tata cara bayar", "VA collectius", "pembayaran via atm", "pembayaran via m-banking"],
+                answer: "<p><strong>Contoh Tata Cara Pembayaran Nasabah</strong></p>\n<p><em>Nama:</em> BUDI SANTOSO</p>\n<p><em>VA:</em> 7828718000907896</p>\n\n<h4>VIA ATM:</h4>\n<ul>\n<li>Masukkan kode bank <strong>016</strong>, lalu VA: <strong>7828-7180-0090-7896</strong>.</li>\n<li>Input nominal, klik <strong>Done</strong>.</li>\n</ul>\n\n<h4>VIA M-Banking:</h4>\n<ul>\n<li>Pilih <strong>Bank Maybank</strong>.</li>\n<li>VA tujuan: <strong>7828-7180-0090-7896</strong>.</li>\n<li>Ganti layanan transfer dari BI FAST ke REALTIME ONLINE.</li>\n<li>Klik <strong>Done</strong>.</li>\n</ul>\n\n<p><strong>Catatan Penting:</strong> Jangan lanjut jika nama tidak muncul di layar.</p>",
+                teams: ["collectius"]
+            },
+            {
+                id: 61,
+                keywords: ["manajemen waktu", "kerja efektif", "atur waktu kerja", "prioritas kerja", "productivity tips"],
+                answer: "<p><strong>Cara Mengatur Waktu dalam 12 Jam Kerja</strong></p>\n\n<ol>\n<li><strong>Buat Prioritas</strong> – Tulis 3–5 tugas penting hari ini.</li>\n<li><strong>Bagi Waktu</strong> – 25–30 menit fokus kerja, istirahat 5 menit.</li>\n<li><strong>Hindari Gangguan</strong> – Matikan notifikasi HP/media sosial.</li>\n<li><strong>Istirahat Singkat</strong> – Setiap 2 jam, rehat 10 menit.</li>\n<li><strong>Evaluasi</strong> – Akhir hari cek pekerjaan selesai & persiapan esok.</li>\n</ol>\n\n<p><strong>Contoh Jadwal Harian:</strong></p>\n<ul>\n<li><strong>Pagi (4 jam)</strong>: Fokus Acc prioritas per portofolio.</li>\n<li><strong>Siang (4 jam)</strong>: Follow-up nasabah.</li>\n<li><strong>Sore (4 jam)</strong>: Evaluasi hari ini & persiapan besok.</li>\n</ul>\n\n<p><strong>Kunci:</strong> Fokus pada prioritas agar hasil lebih maksimal.</p>",
+                teams: ["collectius"]
+            },
+            {
+                id: 62,
+                keywords: ["nasabah klaim sudah lunas", "surat lunas", "blokir komunikasi", "tagihan masih aktif"],
+                answer: "<p><strong>Langkah Menangani Nasabah yang Klaim Sudah Lunas tapi Blokir Komunikasi</strong></p>\n\n<ol>\n<li><strong>Verifikasi Identitas</strong> – Pastikan benar nasabah tersebut.</li>\n<li><strong>Kirim Pesan dengan Pertanyaan</strong> – Jangan langsung redaksi.</li>\n</ol>\n\n<p><strong>Contoh Kalimat:</strong></p>\n\n<ol>\n<li>\"Ibu/Bapak [nama nasabah], terima kasih informasi pelunasan. Namun sistem kami masih catat belum lunas. Mohon balas pesan ini agar kami bantu prosesnya.\"</li>\n<li>\"Pemblokiran komunikasi tidak hapus kewajiban. Kami harap Anda kooperatif. Silakan merespons pesan ini agar kami dapat membantu prosesnya.\"</li>\n</ol>",
+                teams: ["collectius"]
+            },
+            {
+                id: 63,
+                keywords: ["data dipinjam saudara", "jaminan pinjaman", "tanggung jawab pemilik data", "pinjam data teman"],
+                answer: "<p><strong>Cara Menjelaskan ke Nasabah yang Meminjamkan Data Saudara/Teman</strong></p>\n\n<p><strong>1. Untuk Nasabah yang Meminjam Data:</strong></p>\n<p>\"Ibu/Bapak (nama nasabah), data ini digunakan sebagai jaminan. Artinya, kewajiban melunasi tetap jadi tanggung jawab pemilik data (Anda).\"</p>\n\n<p><strong>2. Penegasan Konsekuensi:</strong></p>\n<p>\"Jika tidak selesaikan, kami terpaksa ambil langkah tegas sesuai ketentuan.\"</p>",
+                teams: ["collectius"]
+            },
+            {
+                id: 64,
+                keywords: ["collectius permata", "collectius danamon", "collectius home credit", "legalitas collectius", "fungsi collectius"],
+                answer: "<p><strong>Collectius Asset Management</strong></p>\n\n<p>Collectius adalah salah satu debt collector terbesar di Asia, termasuk Indonesia. Bekerja sama dengan bank, multifinance, dan fintech.</p>\n\n<p><strong>Legalitas:</strong> Diawasi oleh OJK sesuai POJK No. 18/2019.</p>\n\n<p><strong>Fungsi:</strong> Menagih utang macet, menawarkan negosiasi, dan restrukturisasi.</p>\n\n<p><strong>Strategi:</strong> Digital collection, analisis data, pendekatan personal.</p>\n\n<p><strong>Proses:</strong> Soft collection → Field collection → Restrukturisasi.</p>\n\n<p><strong>Kontroversi:</strong> Keluhan tentang frekuensi panggilan & kesalahan data.</p>\n\n<p><strong>Keunggulan:</strong> Teknologi, mitra bank besar, patuh OJK.</p>\n\n<p><strong>Kesimpulan:</strong> Collectius resmi, tetapi nasabah punya hak protes jika ada pelanggaran.</p>",
+                teams: ["collectius"]
+            },
+            {
+                id: 65,
+                keywords: ["nasabah tidak mau bayar va", "virtual account", "pembayaran salah tujuan", "rekening lama", "nasabah macet"],
+                answer: "<p><strong>Cara Menjelaskan ke Nasabah yang Tidak Mau Bayar ke VA (Virtual Account)</strong></p>\n\n<p><strong>1. Konfirmasi Pembayaran via VA:</strong></p>\n<p>\"Ibu/Bapak [nama nasabah], pembayaran saat ini wajib via Virtual Account (VA). Jika bayar ke no kontrak lama, dana akan diretur karena Anda sudah termasuk nasabah Kolektibilitas 5.\"</p>\n\n<p><strong>2. Pastikan Kebenaran VA:</strong></p>\n<p>\"Pastikan VA benar, nama akan muncul saat input. Jika ragu, kunjungi cabang terdekat.\"</p>",
+                teams: ["collectius"]
+            },
+            {
+                id: 66,
+                keywords: ["alamat tidak valid", "data alamat salah", "nik valid", "validasi data", "update data ke bank"],
+                answer: "<p><strong>Cara Menjelaskan ke Nasabah yang Alamat Tidak Valid</strong></p>\n\n<p><strong>Mengenai Tagihan:</strong></p>\n<p>\"Meski alamat beda, tagihan atas nama Ibu/Bapak tetap berlaku. Disarankan selesaikan hal ini agar tidak jadi kendala di masa depan.\"</p>\n\n<p><strong>Penjelasan Kesalahan Sistem:</strong></p>\n<p>\"Data alamat mungkin belum update di sistem kami. Saran: Perbarui data langsung di bank/OJK.\"</p>\n\n<p><strong>Solusi Win-Win:</strong></p>\n<p>\"Silakan datangi kantor cabang bank/OJK untuk pastikan data alamat diperbarui.\"</p>",
+                teams: ["collectius"]
+            },
+            // BAF Team Pairs
+            {
+                id: 67,
+                keywords: ["nmc", "umc", "syana", "multi product", "headquarter"],
+                answer: "<p><strong>Produk Pinjaman BAF</strong></p>\n<ul>\n<li><strong>NMC (New Motor Cycle)</strong>: Pembiayaan untuk pembelian motor baru.</li>\n<li><strong>UMC (Used Motor Cycle)</strong>: Pembiayaan untuk pembelian motor bekas.</li>\n<li><strong>Syana</strong>: Produk pembiayaan berupa penggadaian BPKB kendaraan bermotor.</li>\n<li><strong>Multi Product</strong>: Pembiayaan untuk pengambilan barang elektronik seperti TV, HP, kulkas, mesin cuci, dll.</li>\n<li><strong>Headquarter</strong>: Pembiayaan untuk produk furniture seperti sofa, kasur, meja, dan lainnya.</li>\n</ul>\n<p><strong>Tunggakan di BAF</strong> terjadi jika nasabah tidak melakukan pembayaran angsuran sesuai jatuh tempo. Jika tunggakan terus berlanjut, maka akan dikenai penalti atau denda serta status kolektibilitas dapat turun ke level lebih rendah.</p>",
+                teams: ["baf"]
+            },
+            {
+                id: 68,
+                keywords: ["push kantor", "nasabah tidak respon", "kontak kantor", "penagihan via kantor"],
+                answer: "<p><strong>Cara Push Kantor Jika Nasabah Tidak Merespon</strong></p>\n<ol>\n<li>Gunakan kontak darurat atau keluarga untuk meminta informasi keberadaan nasabah.</li>\n<li>Kontak tempat kerja nasabah untuk mencari tahu apakah dia masih bekerja atau pindah alamat.</li>\n<li>Jika tetap tidak ada respons, kirim surat somasi/peringatan sebagai langkah formal.</li>\n<li>Jika semua cara gagal, lanjutkan ke akun lain guna efisiensi waktu.</li>\n</ol>",
+                teams: ["baf"]
+            },
+            {
+                id: 69,
+                keywords: ["osb", "outstanding balance", "jumlah tunggakan", "total tagihan"],
+                answer: "<p><strong>OSB (Outstanding Balance)</strong></p>\n<p>OSB adalah jumlah total tunggakan setelah dihitung berdasarkan pokok pinjaman, bunga, dan denda yang terakumulasi hingga saat ini. Nilai OSB bisa berubah setiap hari karena adanya bunga harian atau denda keterlambatan.</p>",
+                teams: ["baf"]
+            },
+            {
+                id: 70,
+                keywords: ["principal", "jumlah lunas", "angka diskon", "pelunasan"],
+                answer: "<p><strong>Principal</strong></p>\n<p>Principal adalah jumlah pokok pinjaman tanpa tambahan bunga atau denda. Dalam negosiasi pelunasan, principal sering menjadi dasar untuk menghitung nilai diskon atau penyelesaian lebih cepat.</p>",
+                teams: ["baf"]
+            },
+            {
+                id: 71,
+                keywords: ["big balance", "tagihan besar", "outsball tinggi"],
+                answer: "<p><strong>Big Balance</strong></p>\n<p>Big Balance merujuk pada tagihan bernilai besar atau Outstanding Balance (Outsball) yang tinggi, biasanya menjadi prioritas khusus dalam proses penagihan karena potensi recoverable yang besar.</p>",
+                teams: ["baf"]
+            },
+            {
+                id: 72,
+                keywords: ["low balance", "tagihan kecil", "outsball kecil"],
+                answer: "<p><strong>Low Balance</strong></p>\n<p>Low Balance adalah tagihan dengan nilai kecil atau Outstanding Balance (Outsball) yang rendah, biasanya lebih mudah diselesaikan melalui negosiasi cepat dan pelunasan sekaligus.</p>",
+                teams: ["baf"]
+            },
+            {
+                id: 73,
+                keywords: ["last pay date", "lpd", "tanggal pembayaran terakhir"],
+                answer: "<p><strong>Last Pay Date (LPD)</strong></p>\n<p>Last Pay Date atau LPD adalah tanggal terakhir nasabah melakukan pembayaran tagihan yang tercatat dalam sistem perusahaan pembiayaan. Digunakan untuk menentukan durasi tunggakan dan status kolektibilitas.</p>",
+                teams: ["baf"]
+            },
+            {
+                id: 74,
+                keywords: ["action code spcl", "spcl", "special case", "unit hilang", "bencana alam"],
+                answer: "<p><strong>Action Code - SPCL (Special Case)</strong></p>\n<ul>\n<li><strong>SPCL</strong>: Special Case, misalnya unit mobil dipinjam orang tanpa izin, hilang, atau terkena dampak bencana alam.</li>\n</ul>",
+                teams: ["baf"]
+            },
+            {
+                id: 75,
+                keywords: ["action code ptp", "ptp", "promise to pay", "janji bayar"],
+                answer: "<p><strong>Action Code - PTP (Promise To Pay)</strong></p>\n<ul>\n<li><strong>PTP</strong>: Promise To Pay, contohnya: nasabah sudah dihubungi dan membuat janji pembayaran pada tanggal tertentu (misalnya 25).</li>\n</ul>",
+                teams: ["baf"]
+            },
+            {
+                id: 76,
+                keywords: ["action code npt", "npt", "not promise to pay", "tidak janji bayar"],
+                answer: "<p><strong>Action Code - NPT (Not Promise To Pay)</strong></p>\n<ul>\n<li><strong>NPT</strong>: Not Promise To Pay, contohnya: nasabah terhubung tetapi belum menentukan tanggal pembayaran meskipun ada niat untuk membayar.</li>\n</ul>",
+                teams: ["baf"]
+            },
+            {
+                id: 77,
+                keywords: ["action code fol", "fol", "follow up", "telfon ulang", "whatsapp ulang"],
+                answer: "<p><strong>Action Code - FOL (Follow Up)</strong></p>\n<ul>\n<li><strong>FOL</strong>: Follow Up, contohnya: nasabah telah dihubungi melalui X-Lite atau WhatsApp, tetapi tidak ada respons sama sekali.</li>\n</ul>",
+                teams: ["baf"]
+            },
+            {
+                id: 78,
+                keywords: ["action code nct", "nct", "not contacted", "no tidak aktif"],
+                answer: "<p><strong>Action Code - NCT (Not Contacted)</strong></p>\n<ul>\n<li><strong>NCT</strong>: No HP tidak aktif, WhatsApp hanya bertanda centang satu, atau panggilan dialihkan/terus sibuk sehingga tidak bisa menghubungi nasabah sama sekali.</li>\n</ul>",
+                teams: ["baf"]
+            },
+            {
+                id: 79,
+                keywords: ["emergency contact", "ec", "menyampaikan tunggakan", "komunikasi ec"],
+                answer: "<p><strong>Cara Agar EC Menyampaikan Tunggakan ke CH</strong></p>\n<ol>\n<li>Jelaskan bahwa EC dicantumkan sebagai kontak darurat dan akan dihubungi jika CH tidak dapat dijangkau.</li>\n<li>Beritahu bahwa jika EC tidak bersedia memberi informasi atau menyampaikan pesan, tim akan terus menghubungi nomor tersebut karena terdaftar sebagai EC resmi.</li>\n</ol>",
+                teams: ["baf"]
+            },
+            {
+                id: 80,
+                keywords: ["debitur meninggal", "ahli waris", "warisan", "kewajiban hutang"],
+                answer: "<p><strong>Ketika Debitur Meninggal Dunia</strong></p>\n<ul>\n<li>Kewajiban utang tetap berlaku selama tidak ada klaim asuransi atau pelepasan hak oleh perusahaan pembiayaan.</li>\n<li>Ahli waris wajib menyelesaikan kewajiban atau mengembalikan objek jaminan (seperti kendaraan) jika tidak mampu bayar.</li>\n<li>Produk asuransi jiwa yang dikaitkan dengan kredit dapat membantu melunasi kewajiban finansial debitur jika meninggal karena sakit atau kecelakaan.</li>\n</ul>",
+                teams: ["baf"]
+            },
+            {
+                id: 81,
+                keywords: ["penyelesaian kredit", "debitur meninggal", "leasing", "langkah selanjutnya"],
+                answer: "<p><strong>Langkah Setelah Debitur Meninggal Dunia</strong></p>\n<ul>\n<li>Perusahaan leasing/pembiayaan akan memberikan panduan penyelesaian kredit.</li>\n<li>Meliputi klaim asuransi jika tersedia serta koordinasi dengan ahli waris.</li>\n</ul>",
+                teams: ["baf"]
+            },
+            {
+                id: 82,
+                keywords: ["pojk", "regulasi ojk", "asuransi kredit", "peraturan terkait"],
+                answer: "<p><strong>Regulasi OJK Terkait</strong></p>\n<ul>\n<li>POJK tentang Produk Asuransi yang Dikaitkan dengan Kredit atau Pembiayaan Syariah dan produksi suretyship.</li>\n</ul>",
+                teams: ["baf"]
+            },
+            {
+                id: 83,
+                keywords: ["dokumen klaim", "syarat klaim asuransi", "surat kematian", "identitas ahli waris"],
+                answer: "<p><strong>Dokumen Klaim Setelah Debitur Meninggal</strong></p>\n<ul>\n<li>Surat akta kematian.</li>\n<li>Identitas diri ahli waris.</li>\n<li>Bukti hubungan keluarga (misalnya Kartu Keluarga).</li>\n</ul>",
+                teams: ["baf"]
+            },
+            {
+                id: 84,
+                keywords: ["perjanjian kredit", "kontrak kredit", "isi kontrak", "ketentuan kredit"],
+                answer: "<p><strong>Perjanjian Kredit</strong></p>\n<p>Merupakan dokumen hukum yang berisi ketentuan dan syarat-syarat kredit antara debitur dan perusahaan pembiayaan, yang menjadi dasar dalam penyelesaian utang jika terjadi hal-hal luar biasa seperti keterlambatan atau kematian debitur.</p>",
+                teams: ["baf"]
+            },
+            {
+                id: 85,
+                keywords: ["baf", "bussan auto finance", "pembiayaan motor yamaha", "pembiayaan motor bekas", "pembiayaan mobil", "pembiayaan elektronik", "gadget", "furnitur", "mesin pertanian", "dana syariah", "multiguna", "jaminan bpkb"],
+                answer: "<p><strong>BAF (Bussan Auto Finance)</strong></p>\n<p><strong>PT Bussan Auto Finance</strong> adalah sebuah perusahaan penyedia jasa keuangan yang berfokus pada pembiayaan sepeda motor baru khusus merek Yamaha. Selain itu, PT Bussan Auto Finance juga melayani:</p>\n<ul>\n<li>Pembiayaan motor bekas</li>\n<li>Pembiayaan mobil baru dan bekas</li>\n<li>Pembiayaan elektronik, gadget, furnitur</li>\n<li>Pembiayaan mesin pertanian</li>\n<li>Pembiayaan syariah</li>\n<li>Pembiayaan multiguna dengan jaminan BPKB</li>\n</ul>",
+                teams: ["baf"]
+            },
+            {
+                id: 86,
+                keywords: ["fidusia", "pengertian fidusia", "jaminan fidusia", "asas fidusia", "objek jaminan fidusia", "penerapan fidusia"],
+                answer: "<p><strong>Pengertian Jaminan Fidusia</strong></p>\n<ul>\n<li>Fidusia adalah jaminan atas benda bergerak baik berwujud maupun tidak berwujud.</li>\n<li>Pemberi fidusia tetap memiliki hak menggunakan benda tersebut.</li>\n<li>Penerapan: Contoh dalam kredit kendaraan bermotor, di mana pemilik tetap bisa pakai kendaraan, tapi hak kepemilikan jadi jaminan bagi lembaga pembiayaan.</li>\n</ul>",
+                teams: ["baf"]
+            },
+            {
+                id: 87,
+                keywords: ["pasal 23 uu no 42 tahun 1999", "pasal 23 ayat 2", "larangan fidusia", "pelanggaran fidusia"],
+                answer: "<p><strong>PASAL FIDUSIA</strong></p>\n<p><strong>Pasal 23 ayat (2) Undang-Undang Nomor 42 Tahun 1999</strong> tentang Jaminan Fidusia menyatakan bahwa pemberi fidusia dilarang mengalihkan, menggadaikan, atau menyewakan benda yang menjadi objek jaminan fidusia yang tidak merupakan benda persediaan kepada pihak lain tanpa persetujuan tertulis dari penerima fidusia.</p>",
+                teams: ["baf"]
+            },
+            {
+                id: 88,
+                keywords: ["pidana fidusia", "sanksi hukum fidusia", "penyalahgunaan jaminan fidusia", "pasal 35 uu fidusia", "pasal 36 uu fidusia"],
+                answer: "<p><strong>Sanksi Hukum atas Penyalahgunaan Jaminan Fidusia</strong></p>\n<ul>\n<li>Pasal 35 UU Fidusia: Ancaman pidana 2–5 tahun bagi siapa pun yang dengan sengaja menghilangkan, mengubah, atau memalsukan keterangan jaminan fidusia.</li>\n<li>Pasal 36 UU Fidusia: Ancaman pidana 1–3 tahun bagi pihak yang mengalihkan benda jaminan tanpa izin.</li>\n</ul>",
+                teams: ["baf"]
+            },
+            {
+                id: 89,
+                keywords: ["cicilan", "cicilan baf", "cara bayar cicilan baf", "pembayaran baf", "bayar angsuran baf", "metode pembayaran baf"],
+                answer: "<p><strong>Cara Membayar Cicilan BAF</strong></p>\n<ol>\n<li><strong>Kantor BAF</strong>: Datang langsung ke cabang BAF terdekat dan lakukan pembayaran tunai di loket.</li>\n<li><strong>Gerai Ritel</strong>: Bayar di Alfamart, Alfamidi, Indomaret, Dan+Dan, Arrindo, Fastpay, Kantor Pos. Pastikan membawa kartu angsuran.</li>\n<li><strong>ATM Bank</strong>:</li>\n<ul>\n<li>Pilih menu \"Angsuran Kredit\" di ATM BCA/BRI/Mandiri/BNI.</li>\n<li>Pilih penyedia layanan: BAF.</li>\n<li>Masukkan nomor kontrak dan ikuti langkah-langkah pembayaran.</li>\n</ul>\n<li><strong>Mobile Banking</strong>:</li>\n<ul>\n<li>Buka aplikasi mobile banking BNI/BRI/Mandiri.</li>\n<li>Pilih menu \"Pembayaran\" atau \"Angsuran Kredit\".</li>\n<li>Pilih BAF, masukkan nomor kontrak, lalu lanjutkan proses.</li>\n</ul>\n<li><strong>Aplikasi Digital</strong>:</li>\n<ul>\n<li>Tokopedia, Blibli, Bukalapak, Kiosbank: Masuk ke menu \"Angsuran Kredit\", pilih BAF, masukkan nomor kontrak.</li>\n</ul>\n<li><strong>QRIS</strong>: Gunakan dompet digital yang mendukung QRIS untuk membayar tagihan BAF.</li>\n</ol>\n<p><strong>Catatan</strong>: Simpan bukti pembayaran sebagai dokumen pendukung.</p>",
+                teams: ["baf"]
+            },
+            {
+                id: 90,
+                keywords: ["cek tagihan baf", "cek cicilan baf", "informasi tagihan baf", "status kredit baf"],
+                answer: "<p><strong>Cara Cek Tagihan BAF</strong></p>\n<ol>\n<li><strong>Call Center BAF</strong>: Hubungi customer service BAF untuk info tagihan terkini.</li>\n<li><strong>Website BAF</strong>: Login ke website resmi BAF dan lihat detail tagihan Anda.</li>\n<li><strong>Platform Marketplace</strong>:</li>\n<ul>\n<li>Buka aplikasi Tokopedia, Blibli, atau Bukalapak.</li>\n<li>Pilih menu \"Angsuran Kredit\".</li>\n<li>Masukkan nomor kontrak dan lihat informasi tagihan.</li>\n</ul>\n</ol>",
+                teams: ["baf"]
+            },
+            {
+                id: 91,
+                keywords: ["ch", "card holder", "nasabah", "pemegang kartu"],
+                answer: "<p><strong>CH (Card Holder)</strong></p>\n<p>CH adalah singkatan dari Card Holder atau nasabah, yaitu pemegang kartu kredit atau pihak yang memiliki tagihan pada perusahaan pembiayaan.</p>",
+                teams: ["baf"]
+            },
+            {
+                id: 92,
+                keywords: ["hm", "alamat rumah", "telepon rumah", "tempat tinggal"],
+                answer: "<p><strong>HM (Alamat / Nomor Telepon Rumah)</strong></p>\n<p>HM merujuk pada alamat atau nomor telepon rumah dari nasabah (Card Holder) yang biasanya digunakan sebagai salah satu data kontak untuk penagihan.</p>",
+                teams: ["baf"]
+            },
+            {
+                id: 93,
+                keywords: ["wk", "alamat kantor", "nomor kantor", "tempat kerja"],
+                answer: "<p><strong>WK (Alamat / Nomor Telepon Kantor)</strong></p>\n<p>WK adalah alamat atau nomor telepon kantor tempat nasabah bekerja. Informasi ini digunakan untuk memverifikasi pekerjaan atau menghubungi nasabah di tempat kerja jika diperlukan.</p>",
+                teams: ["baf"]
+            },
+            {
+                id: 94,
+                keywords: ["ec", "emergency contact", "kontak darurat", "saudara tidak serumah"],
+                answer: "<p><strong>EC (Emergency Contact)</strong></p>\n<p>EC atau Emergency Contact adalah kontak darurat berupa nama dan nomor telepon relasi nasabah seperti saudara atau teman yang tidak tinggal serumah dengan nasabah, yang bisa dihubungi jika nasabah tidak dapat dijangkau langsung.</p>",
+                teams: ["baf"]
+            },
+            {
+                id: 95,
+                keywords: ["hp", "nomor handphone", "nomor pribadi", "kontak utama"],
+                answer: "<p><strong>HP (Nomor Handphone)</strong></p>\n<p>HP adalah nomor handphone resmi milik nasabah yang digunakan sebagai salah satu sarana komunikasi utama dalam proses penagihan atau follow-up.</p>",
+                teams: ["baf"]
+            },
+            // AmarDelqy Team Pairs
+            {
+                id: 96,
+                keywords: ["deliquent", "dpd", "day past due", "keterlambatan pembayaran", "status kolektibilitas", "cicilan telat"],
+                answer: "<p><strong>Apa Itu Akun Deliquent?</strong></p>\n<p>Akun deliquent atau disingkat 'delqy' merujuk pada akun cicilan nasabah yang masih dalam tahap keterlambatan pembayaran. Dihitung berdasarkan DPD (Day Past Due), yaitu jumlah hari sejak tanggal jatuh tempo terlewati.</p>",
+                teams: ["amardelqy"]
+            },
+            {
+                id: 97,
+                keywords: ["jenis deliquent", "30 dpd", "60 dpd", "90 dpd", "120 dpd", "150 dpd", "amarbank", "tunaiku"],
+                answer: "<p><strong>Jenis-Jenis Akun Deliquent di Amarbank</strong></p>\n<ul>\n<li><strong>30 DPD</strong>: Tunggakan selama 30 hari.</li>\n<li><strong>60 DPD</strong>: Tunggakan selama 60 hari.</li>\n<li><strong>90 DPD</strong>: Tunggakan selama 90 hari.</li>\n<li><strong>120 DPD</strong>: Tunggakan selama 120 hari.</li>\n<li><strong>150 DPD</strong>: Tunggakan selama 150 hari.</li>\n</ul>\n<p>Tim kami fokus menangani akun dengan status <strong>120 DPD</strong> dan <strong>150 DPD</strong>.</p>",
+                teams: ["amardelqy"]
+            },
+            {
+                id: 98,
+                keywords: ["status kolektibilitas 4", "kolektibilitas 4", "akun macet", "status akun"],
+                answer: "<p><strong>Status Kolektibilitas 4</strong></p>\n<p>Akun dengan status deliquent <strong>120 DPD</strong> dan <strong>150 DPD</strong> berada dalam Status Kolektibilitas 4. Ini berarti tagihan sudah sangat tertunggak dan memerlukan penanganan serius.</p>",
+                teams: ["amardelqy"]
+            },
+            {
+                id: 99,
+                keywords: ["konfirmasi identitas nasabah", "verifikasi identitas", "telepon pertama", "call handling", "amarbank collection"],
+                answer: "<p><strong>Cara Konfirmasi Identitas Nasabah Saat Pertama Telepon</strong></p>\n<ol>\n<li>Tanyakan nama lengkap nasabah.</li>\n<li>Konfirmasi alamat tinggal saat ini.</li>\n<li>Tanyakan apakah dia masih bekerja di tempat yang tercantum dalam data.</li>\n<li>Perkenalkan diri sebagai petugas Amarbank/Tunaiku.</li>\n<li>Sampaikan tujuan panggilan: informasi tagihan dan solusi pelunasan.</li>\n</ol>",
+                teams: ["amardelqy"]
+            },
+            {
+                id: 100,
+                keywords: ["media komunikasi collection", "whatsapp", "email", "sosial media", "telepon seluler"],
+                answer: "<p><strong>Media Komunikasi Collection</strong></p>\n<ul>\n<li><strong>X-Lite</strong>: Alat utama untuk panggilan telepon langsung.</li>\n<li><strong>WhatsApp</strong>: Digunakan untuk mengirimkan dokumen atau reminder tagihan.</li>\n<li><strong>Email</strong>: Untuk komunikasi formal.</li>\n<li><strong>Sosial Media</strong>: Facebook, Instagram, Twitter untuk tracing dan follow-up.</li>\n</ul>",
+                teams: ["amardelqy"]
+            },
+            {
+                id: 101,
+                keywords: ["tracing", "fitur tracing", "cari nomor nasabah", "data pribadi debitur"],
+                answer: "<p><strong>Apa Itu Tracing?</strong></p>\n<p>Tracing adalah fitur pencarian nomor kontak nasabah menggunakan data pribadi seperti NIK atau nama lengkap, biasanya digunakan jika kontak utama tidak aktif atau tidak merespons.</p>",
+                teams: ["amardelqy"]
+            },
+            {
+                id: 102,
+                keywords: ["tahap finishing", "komunikasi collection", "pembuatan surat dokument", "payment collection"],
+                answer: "<p><strong>Tahap Finishing dalam Proses Penagihan</strong></p>\n<p>Merupakan tahap akhir komunikasi collection, yaitu saat kamu dan debitur sudah sepakat dan memasuki proses pembuatan surat dokumen atau konfirmasi pembayaran.</p>",
+                teams: ["amardelqy"]
+            },
+            {
+                id: 103,
+                keywords: ["searching debitur", "latar belakang debitur", "profesi debitur", "jabatan debitur"],
+                answer: "<p><strong>Fungsi Searching Debitur</strong></p>\n<p>Mencari informasi latar belakang pekerjaan, jabatan, dan kemampuan finansial debitur guna membantu menentukan strategi negosiasi pembayaran yang efektif.</p>",
+                teams: ["amardelqy"]
+            },
+            {
+                id: 104,
+                keywords: ["kriteria searching", "nama unik debitur", "pekerjaan besar", "last payment besar", "total tagihan besar"],
+                answer: "<p><strong>Kriteria Data Debitur yang Bisa Disearching</strong></p>\n<ul>\n<li>Nama unik yang jarang ditemui.</li>\n<li>Pekerjaan atau jabatan besar (misalnya direktur).</li>\n<li>Last payment yang besar.</li>\n<li>Total tagihan besar.</li>\n<li>Email atau nomor pengajuan valid.</li>\n</ul>",
+                teams: ["amardelqy"]
+            },
+            {
+                id: 105,
+                keywords: ["platform searching", "google", "linkedin", "social media"],
+                answer: "<p><strong>Platform untuk Melakukan Searching Nasabah</strong></p>\n<ul>\n<li><strong>Google</strong>: Cari nama lengkap + kata kunci seperti 'AstraPay' atau 'Tunaiku'.</li>\n<li><strong>LinkedIn</strong>: Cari riwayat pekerjaan dan jabatan.</li>\n<li><strong>Sosial Media</strong>: Facebook, Instagram, Twitter untuk mencari info pribadi.</li>\n</ul>",
+                teams: ["amardelqy"]
+            },
+            {
+                id: 106,
+                keywords: ["penekanan alasan nasabah", "bukti dokumen", "surat tertulis"],
+                answer: "<p><strong>Penekanan Jika Nasabah Beri Alasan Tidak Punya Uang</strong></p>\n<ul>\n<li>Minta bukti dokumen resmi seperti surat pemecatan atau kebangkrutan usaha.</li>\n<li>Jika tidak ada bukti, tekankan bahwa pinjaman tetap harus dilunasi.</li>\n</ul>",
+                teams: ["amardelqy"]
+            },
+            {
+                id: 107,
+                keywords: ["tagihan digunakan orang lain", "teman", "keluarga", "sanak saudara"],
+                answer: "<p><strong>Jika Tagihan Digunakan Orang Lain</strong></p>\n<p>Kami hanya boleh menagih ke pemilik data. Silakan pemilik data berkomunikasi langsung dengan pihak yang bersangkutan. Kami tetap akan melakukan konfirmasi dan penagihan ke pemilik data.</p>",
+                teams: ["amardelqy"]
+            },
+            {
+                id: 108,
+                keywords: ["keberatan bunga denda", "besar bunga", "keberatan denda"],
+                answer: "<p><strong>Menjawab Keberatan Nasabah terhadap Bunga/Denda</strong></p>\n<ul>\n<li>Jelaskan bahwa Amarbank Tunaiku adalah aplikasi legal yang diawasi OJK.</li>\n<li>Pinjaman transparan sejak awal, sesuai kesepakatan.</li>\n<li>Tanyakan kenapa akad perjanjian tidak dibatalkan jika merasa bunga/denda terlalu besar.</li>\n<li>Kami menagih sesuai surat perjanjian yang ditandatangani kedua belah pihak.</li>\n</ul>",
+                teams: ["amardelqy"]
+            },
+            {
+                id: 109,
+                keywords: ["nasabah janji lunaskan", "oke saya lunaskan", "baik saya lunaskan"],
+                answer: "<p><strong>Jika Nasabah Langsung Janji Lunaskan</strong></p>\n<ul>\n<li>Tanyakan apakah masih bisa membuka aplikasi Tunaiku.</li>\n<li>Tanyakan apakah sudah tau total nominal tagihan saat ini.</li>\n<li>Pastikan rencana pembayaran tidak melebihi bulan ini.</li>\n<li>Jika jauh dari tenggak waktu, tawarkan keringanan pelunasan.</li>\n<li>Jika tidak bisa akses aplikasi, lanjutkan penginformasian tagihan ulang.</li>\n</ul>",
+                teams: ["amardelqy"]
+            },
+            {
+                id: 110,
+                keywords: ["cek status pinjaman tunaiku", "login tunaiku", "cek aplikasi tunaiku", "status pinjaman"],
+                answer: "<p><strong>Cara Cek Status Pinjaman di Amarbank Tunaiku</strong></p>\n<ul>\n<li><a href=\"https://support.tunaiku.com/status/login/list-question/113\"  target=\"_blank\">Cek Status Pinjaman</a></li>\n<li><a href=\"https://www.mediaperbankan.com/...\"  target=\"_blank\">Status Pinjaman</a></li>\n<li><a href=\"https://tunaiku.com/customer\"  target=\"_blank\">Tata Cara Pembayaran</a></li>\n<li><a href=\"https://tunaiku.com/\"  target=\"_blank\">Website Resmi Tunaiku</a></li>\n</ul>",
+                teams: ["amardelqy"]
+            },
+            {
+                id: 111,
+                keywords: ["telefon salah sambung", "nomor tidak sesuai", "identifikasi penelepon"],
+                answer: "<p><strong>Jika Menelpon Nomor Salah Sambung</strong></p>\n<ol>\n<li>Konfirmasi siapa yang sedang bicara.</li>\n<li>Tanyakan sejak kapan menggunakan nomor tersebut.</li>\n<li>Pernahkah menerima panggilan atas nama debitur?</li>\n<li>Tanyakan hubungan dengan debitur.</li>\n<li>Laporan dan tutup percakapan dengan sopan: \"Baik Bapak/Ibu, saya bantu check terlebih dahulu untuk nomornya, nanti kami hubungi kembali. Terima kasih.\"</li>\n</ol>",
+                teams: ["amardelqy"]
+            },
+            {
+                id: 112,
+                keywords: ["perbedaan ec dan tambahan ch", "emergency contact", "tambahan data debitur"],
+                answer: "<p><strong>Perbedaan EC dan Tambahan CH/Debitur</strong></p>\n<ul>\n<li><strong>EC</strong>: Kontak darurat yang dicantumkan oleh nasabah.</li>\n<li><strong>Tambahan CH/debitur</strong>: Data tambahan hasil investigasi mendalam melalui fitur tracing kantor.</li>\n</ul>",
+                teams: ["amardelqy"]
+            },
+            {
+                id: 113,
+                keywords: ["cara menghubungi ec", "kontak darurat", "minta bantuan ec"],
+                answer: "<p><strong>Cara Menghubungi Emergency Contact (EC)</strong></p>\n<ol>\n<li>HUBUNGI nomor EC yang tercantum.</li>\n<li>Tanyakan nama dan alamat mereka.</li>\n<li>Tanyakan apakah masih berkomunikasi dengan debitur.</li>\n<li>Tanyakan hubungan mereka dengan debitur.</li>\n<li>Minta bantuan untuk menyampaikan tunggakan dan program keringanan ke debitur.</li>\n</ol>",
+                teams: ["amardelqy"]
+            },
+            {
+                id: 114,
+                keywords: ["menghubungi kantor debitur", "identifikasi pekerjaan", "background debitur"],
+                answer: "<p><strong>Menghubungi Kantor Debitur</strong></p>\n<p>Dilakukan untuk:</p>\n<ul>\n<li>Mendapatkan respons langsung dari debitur.</li>\n<li>Mengidentifikasi latar belakang pekerjaan debitur sebagai bahan pendekatan.</li>\n</ul>",
+                teams: ["amardelqy"]
+            },
+            {
+                id: 115,
+                keywords: ["terhubung dengan kantor", "mintasambungdebitur", "detail resign", "resign atauphk"],
+                answer: "<p><strong>Jika Terhubung dengan Kantor</strong></p>\n<ul>\n<li>Mintalah langsung disambungkan dengan debitur.</li>\n<li>Jika kantor mengatakan debitur sudah resign/tidak ada, tanyakan detailnya.</li>\n<li>Tanyakan sejak kapan resign.</li>\n<li>Informasikan bahwa nomor kantor tetap dihubungi secara otomatis untuk perihal debitur.</li>\n</ul>",
+                teams: ["amardelqy"]
+            },
+            {
+                id: 116,
+                keywords: ["debitur bersikeras nominal tidak sesuai", "merayu", "skema 2x bayar", "pertanyakan balik", "ultimatum"],
+                answer: "<p><strong>Jika Debitur Bersikeras Nominal Tidak Sesuai</strong></p>\n<ul>\n<li><strong>Merayu</strong>: Tawarkan program discount/pemotongan tagihan.</li>\n<li><strong>Skema 2x Bayar</strong>: Buat skema dua kali pembayaran dengan tenggat waktu tertentu.</li>\n<li><strong>Pertanyakan Balik</strong>: Tanyakan solusi terbaik jika posisi Anda adalah petugas collection.</li>\n<li><strong>Ultimatum</strong>: Dorong untuk segera bayarkan atau arahkan ke kantor.</li>\n</ul>",
+                teams: ["amardelqy"]
+            },
+            {
+                id: 117,
+                keywords: ["kurang percaya diri", "penelponan", "komunikasi nasabah", "collection", "penagihan"],
+                answer: "<p><strong>Meningkatkan Percaya Diri dalam Penelponan</strong></p>\n<ul>\n<li>Latih komunikasi dengan role-play.</li>\n<li>Praktikkan ilmu yang didapatkan dari training.</li>\n<li>Cari ilmu tambahan di internet, buku, atau YouTube.</li>\n<li>Biasakan berbicara sendiri di cermin untuk latihan.</li>\n<li>Tenang saja, kamu pasti dibantu oleh tim dan TL.</li>\n</ul>",
+                teams: ["amardelqy"]
+            },
+            {
+                id: 118,
+                keywords: ["semangat juang", "target collection", "motivasi collection", "gali sampai akar", "strategi penagihan"],
+                answer: "<p><strong>Strategi Meningkatkan Semangat Juang</strong></p>\n<ul>\n<li>Buat target dan goals hidup jelas.</li>\n<li>Rencanakan masa depan, karena itu akan membangkitkan semangat dan tanggung jawab.</li>\n<li>Terapkan prinsip collection: Gali sampai ke akar-akarnya.</li>\n<li>'Makan ayam gak bisa sampai ke tulang-tulangnya, kalau sama kamu aku mau.' — Pamungkas Said</li>\n<li>Gali terus sampai akhirnya lunas!</li>\n</ul>",
+                teams: ["amardelqy"]
+            },
+            {
+                id: 119,
+                keywords: ["pelupa", "catat informasi", "manajemen data", "ingatan kerja"],
+                answer: "<p><strong>Mengatasi Sifat Pelupa</strong></p>\n<ul>\n<li>Catat segala sesuatu baik di kertas maupun digital.</li>\n<li>Bukan sekadar mencatat, tapi juga pelajari, hapalkan, dan praktikkan.</li>\n</ul>",
+                teams: ["amardelqy"]
+            },
+            {
+                id: 120,
+                keywords: ["pendekatan monoton", "strategi pendekatan debitur", "handling debitur", "personalisasi komunikasi"],
+                answer: "<p><strong>Menghindari Pendekatan Monoton</strong></p>\n<ul>\n<li>Pelajari berbagai cara pendekatan ke debitur.</li>\n<li>Jangan hanya satu cara saja.</li>\n<li>Pelajari detail-detail dalam komunikasi seperti penggunaan kata ganti orang, tanda baca, dan huruf kapital.</li>\n</ul>",
+                teams: ["amardelqy"]
+            },
+            {
+                id: 121,
+                keywords: ["over handling", "serah terima case", "tanggung jawab pic", "teamwork collection"],
+                answer: "<p><strong>Menghindari Over Handling</strong></p>\n<ul>\n<li>Tanggung jawab akun tetap pada PIC.</li>\n<li>Jika tidak tahu harus menjawab apa, bilang: 'Baik Pak/Bu, coba saya bantu ajukan terlebih dahulu.'</li>\n<li>Catat hal-hal yang tidak dipahami.</li>\n<li>Diskusikan dengan teman satu tim atau team leader.</li>\n</ul>",
+                teams: ["amardelqy"]
+            },
+            {
+                id: 122,
+                keywords: ["kurang teliti", "salah tangkap informasi", "fokus saat menangani kasus", "kesalahpahaman"],
+                answer: "<p><strong>Mengatasi Kurang Teliti Saat Menangani Kasus</strong></p>\n<ul>\n<li>Lebih teliti dalam mendengarkan.</li>\n<li>Jangan takut minta mengulang jika tidak mengerti.</li>\n<li>Ketik ulang percakapan untuk memahami.</li>\n<li>Jika masih ragu, tanyakan ke teman atau TL.</li>\n</ul>",
+                teams: ["amardelqy"]
+            },
+            {
+                id: 123,
+                keywords: ["x-lite", "software x-lite", "menghubungi ch", "data excel", "nomor telepon", "collection tools"],
+                answer: "<p><strong>Cara Menghubungi CH Menggunakan X-Lite</strong></p>\n<ol>\n<li>Buka file Excel yang berisi data nasabah.</li>\n<li>Cari nama CH yang ingin dihubungi.</li>\n<li>Lihat kolom Nomor 1 dan Nomor 2.</li>\n<li>Buka aplikasi X-Lite.</li>\n<li>Copy nomor dari angka ke-8, tambahkan angka 0 di depan, lalu paste di X-Lite.</li>\n<li>Klik tombol hijau untuk menelepon.</li>\n<li>Jangan lupa menghubungi Emergency Contact (EC) yang tercantum dalam data.</li>\n</ol>",
+                teams: ["amardelqy"]
+            },
+            {
+                id: 124,
+                keywords: ["sumber belajar", "faq ojk", "youtube collection", "sumber informasi pinjaman online"],
+                answer: "<p><strong>Sumber Belajar Tambahan</strong></p>\n<ul>\n<li><a href=\"https://www.youtube.com/watch?v=curCHGBjEz0\" target=\"_blank\">YouTube - Collection Strategy</a></li>\n<li><a href=\"https://www.ojk.go.id/id/berita-dankegiatan/publikasi/Documents/Pages/-FAQ-Terkait-Layanan-Pinjam-Meminjam-Uang-BerbasisTeknologi-Informasi-KategoriKonsumen/FAQ%20LPMUBTI%20-%20Kategori%20Konsumen.pdf\" target=\"_blank\">FAQ OJK Layanan Pinjam-Meminjam Uang Berbasis Teknologi Informasi</a></li>\n</ul>",
+                teams: ["amardelqy"]
+            },
+            {
+                id: 125,
+                keywords: ["bunga flat", "denda keterlambatan", "bunga pinjaman", "denda amarbank", "150 ribu denda"],
+                answer: "<p><strong>Bunga Flat & Denda di Amarbank Tunaiku</strong></p>\n<ul>\n<li>Bunga flat: Tetap dihitung dari pokok pinjaman awal selama tenor.</li>\n<li>Denda keterlambatan: Rp150.000/bulan.</li>\n<li>Denda terakumulasi setiap bulan jika belum dibayar.</li>\n</ul>",
+                teams: ["amardelqy"]
+            },
+            {
+                id: 126,
+                keywords: ["program keringanan", "diskon pelunasan", "penghapusan denda", "sistem dp", "negosiasi cicilan"],
+                answer: "<p><strong>Program Keringanan di Amarbank Tunaiku</strong></p>\n<ul>\n<li><strong>Pelunasan dengan Diskon</strong>: Pengurangan nominal tagihan jika lunas sekali bayar.</li>\n<li><strong>Penghapusan Denda</strong>: Bebas denda sesuai kriteria tertentu.</li>\n<li><strong>DP (Down Payment)</strong>: Bayar separuh nominal overdue, sisanya dicicil.</li>\n<li><strong>Negosiasi Cicilan</strong>: Bayar beberapa angsuran jika tidak bisa lunas sekaligus.</li>\n</ul>",
+                teams: ["amardelqy"]
+            },
+            {
+                id: 127,
+                keywords: ["reff id", "pic", "parent segment", "overdue amount", "m1", "istilah collection"],
+                answer: "<p><strong>Istilah Spesifik di Delqy</strong></p>\n<ul>\n<li><strong>REFF ID</strong>: Nomor kontrak tagihan nasabah.</li>\n<li><strong>PIC</strong>: Person In Charge atas akun tersebut.</li>\n<li><strong>PARENT SEGMENT</strong>: Jenis akun (misalnya 120 DPD atau 150 DPD).</li>\n<li><strong>OVERDUE AMOUNT</strong>: Total nominal keterlambatan hingga bulan ini.</li>\n<li><strong>M1</strong>: Jumlah cicilan tiap bulan.</li>\n</ul>",
+                teams: ["amardelqy"]
+            },
+            {
+                id: 128,
+                keywords: ["tidak ada uang", "tidak ada dana", "solusi collection", "negosiasi pembayaran"],
+                answer: "<p><strong>Jika Nasabah Tidak Ada Dana</strong></p>\n<ul>\n<li>Tawarkan skema DP atau cicilan bertahap.</li>\n<li>Jelaskan opsi keringanan yang tersedia.</li>\n<li>Tekankan pentingnya penyelesaian demi SLIK tidak terganggu.</li>\n</ul>",
+                teams: ["amardelqy"]
+            },
+            {
+                id: 129,
+                keywords: ["perhitungan bunga", "perhitungan denda", "total pembayaran", "pinjaman tunai", "tenor", "cicilan"],
+                answer: "<p><strong>Contoh Perhitungan Bunga dan Denda</strong></p>\n<ul>\n<li>Pinjaman: Rp10.000.000</li>\n<li>Tenor: 12 bulan</li>\n<li>Cicilan: Rp1.200.000/bulan</li>\n<li>Total pembayaran: Rp14.400.000</li>\n<li>Bunga: Rp4.400.000</li>\n<li>Denda: Rp150.000 x 6 = Rp900.000</li>\n<li>Total tagihan menjadi: Rp15.300.000</li>\n</ul>",
+                teams: ["amardelqy"]
+            },
+            {
+                id: 130,
+                keywords: ["os", "overdue", "outstanding", "keterlambatan", "tagihan", "cicilan"],
+                answer: "<p><strong>Perbedaan OS dan Overdue</strong></p>\n<ul>\n<li><strong>OS (Outstanding Balance)</strong>: Total nominal keseluruhan tagihan yang harus dibayar agar lunas.</li>\n<li><strong>Overdue</strong>: Keterlambatan pembayaran hingga bulan ini saja.</li>\n</ul>\n<p><strong>Contoh:</strong> Nasabah ambil 12 tenor dan belum bayar samasekali hingga bulan ke-8, maka Tagihan Overdue = 8 bulan, Tagihan OS = 12 bulan + denda.</p>",
+                teams: ["amardelqy"]
+            },
+            {
+                id: 131,
+                keywords: ["alur penagihan", "proses collection", "langkah collection", "finishing payment"],
+                answer: "<p><strong>Alur Penagihan di Amarbank</strong></p>\n<ol>\n<li><strong>Terhubung</strong>: Hubungi nasabah.</li>\n<li><strong>Penginformasian Tagihan</strong>: Sampaikan jumlah tagihan.</li>\n<li><strong>Negosiasi</strong>: Tawarkan diskon atau cicilan.</li>\n<li><strong>Finishing</strong>: Persiapkan dokumen pelunasan.</li>\n<li><strong>Payment</strong>: Selesaikan pembayaran.</li>\n</ol>",
+                teams: ["amardelqy"]
+            },             
+            // TA Asset Team Pairs
+            {
+                id: 132,
+                keywords: ["portfolio ta asset", "portofolio perusahaan", "apa saja portofolio ta asset", "daftar mitra ta asset"],
+                answer: "<p><strong>Portofolio TA Asset Indonesia</strong></p>\n<p>TA Asset Indonesia mengelola beberapa portofolio penting, yaitu:</p>\n<ul>\n<li><strong>ADAPUNDI</strong>: Platform fintech berbasis teknologi dengan izin OJK.</li>\n<li><strong>UANGME</strong>: Fintech peer-to-peer lending berizin OJK.</li>\n<li><strong>AEON</strong>: Kartu kredit dan layanan pembiayaan ritel.</li>\n<li><strong>KREDIT PLUS</strong>: Pembiayaan multiguna dan agunan BPKB motor/mobil.</li>\n<li><strong>PAYKU / ITC</strong>: Aplikasi digital untuk pembayaran dan pinjaman online.</li>\n<li><strong>HOME CREDIT INDONESIA (HCI)</strong>: Perusahaan pembiayaan konsumen multinasional.</li>\n</ul>",
+                teams: ["taasset"]
+            },
+            {
+                id: 133,
+                keywords: ["adapundi", "pt info tekno siaga", "fintech adapundi", "perusahaan pendanaan"],
+                answer: "<p><strong>Apa Itu ADAPUNDI?</strong></p>\n<p>PT Info Tekno Siaga atau dikenal sebagai <strong>Adapundi</strong> adalah perusahaan fintech yang telah mendapatkan izin dari Otoritas Jasa Keuangan (OJK) dengan Nomor KEP-48/D.05/2021 tertanggal 2 Juni 2021.</p>\n<p>Sebagai anggota Lembaga Alternatif Penyelesaian Sengketa Sektor Jasa Keuangan, Adapundi bertindak sebagai penghubung antara pemberi dana dan penerima dana dalam skema pinjaman online.</p>",
+                teams: ["taasset"]
+            },
+            {
+                id: 134,
+                keywords: ["syarat pengajuan adapundi", "ktp adapundi", "pendanaan adapundi", "usia adapundi"],
+                answer: "<p><strong>Syarat Pengajuan di Adapundi:</strong></p>\n<ol>\n<li>Warga Negara Indonesia (WNI)</li>\n<li>Usia minimal 21 tahun</li>\n<li>KTP aktif dan valid</li>\n<li>Nomor telepon aktif</li>\n<li>Email terverifikasi</li>\n<li>Penghasilan tetap (minimal Rp3 juta/bulan)</li>\n<li>Rekening bank atas nama sendiri</li>\n</ol>",
+                teams: ["taasset"]
+            },
+            {
+                id: 135,
+                keywords: ["aeon credit service", "kartu kredit aeon", "pinjaman aeon", "aeon visa platinum"],
+                answer: "<p><strong>Profil AEON Credit Service</strong></p>\n<p>AEON adalah salah satu lembaga keuangan terbesar di Asia, hadir di Indonesia melalui kerja sama PT Aeon Credit Service Indonesia. Fokusnya pada kartu kredit dan layanan pembiayaan ritel.</p>\n\n<p><strong>Produk Utama:</strong></p>\n<ul>\n<li><strong>AEON VISA Classic</strong></li>\n<li><strong>AEON VISA Platinum</strong></li>\n<li><strong>AEON JCB Precious</strong></li>\n<li><strong>AEON Biznet Card</strong></li>\n</ul>\n\n<p><strong>Syarat Penghasilan Minimum:</strong></p>\n<ul>\n<li>Rp3.000.000/bulan (Classic)</li>\n<li>Rp6.000.000/bulan (Platinum)</li>\n<li>Rp8.000.000/bulan (JCB & Biznet)</li>\n</ul>\n\n<p><strong>Domisili:</strong> Jabodetabek</p>",
+                teams: ["taasset"]
+            },
+            {
+                id: 136,
+                keywords: ["suku bunga aeon", "cicilan aeon", "tarik tunai aeon", "tenor aeon", "biaya keterlambatan aeon"],
+                answer: "<p><strong>Bunga dan Biaya AEON Credit Service:</strong></p>\n<ul>\n<li><strong>Cicilan Ringan:</strong> 1,25% per bulan</li>\n<li><strong>Tarik Tunai:</strong> 1,75% per bulan atau 21% per tahun</li>\n<li><strong>Minimal Cicilan:</strong> Rp500.000</li>\n<li><strong>Pilihan Tenor:</strong> 3, 6, 9, atau 12 bulan</li>\n<li><strong>Biaya Keterlambatan:</strong> 1% dari total tagihan jika melebihi tanggal jatuh tempo</li>\n</ul>",
+                teams: ["taasset"]
+            },
+            {
+                id: 137,
+                keywords: ["kredit plus", "kb finansia multi finance", "pinjaman kredit plus", "agunan motor kredit plus"],
+                answer: "<p><strong>Apa Itu KREDIT PLUS (PT KB Finansia Multi Finance)?</strong></p>\n<p>Kredit Plus menyediakan fasilitas pinjaman dana tunai dengan agunan BPKB motor atau mobil, serta pembiayaan multi guna untuk:</p>\n<ul>\n<li>Gadget</li>\n<li>Home Appliance</li>\n<li>IT dan Komunikasi</li>\n<li>Audio/Video</li>\n<li>Furniture</li>\n<li>Barang Lain</li>\n</ul>",
+                teams: ["taasset"]
+            },
+            {
+                id: 138,
+                keywords: ["syarat kredit plus", "dokumen kredit plus", "pengajuan kredit plus"],
+                answer: "<p><strong>Syarat Umum Pengajuan Kredit di Kredit Plus:</strong></p>\n<ul>\n<li>Warga Negara Indonesia (WNI)</li>\n<li>Usia minimal 21 tahun</li>\n<li>KTP dan KK</li>\n<li>NPWP (opsional)</li>\n<li>Slip gaji atau surat keterangan penghasilan</li>\n<li>Fotokopi PBB, Bukti Kepemilikan Rumah, SIUP/SKU</li>\n<li>Fotokopi Rekening Tabungan 3 bulan terakhir</li>\n</ul>",
+                teams: ["taasset"]
+            },
+            {
+                id: 139,
+                keywords: ["bunga kredit plus", "multi produk kredit plus", "promo bunga kredit plus"],
+                answer: "<p><strong>Bunga Kredit Plus:</strong></p>\n<ul>\n<li><strong>Multi Produk:</strong> Mulai dari 1,99% per bulan (tenor 1 tahun).</li>\n<li><strong>Agunan Motor:</strong> Mulai dari 2,3% per bulan (tenor 1 tahun).</li>\n<li><strong>Agunan Mobil:</strong> Mulai dari 0,70% per bulan (tenor 1 tahun).</li>\n<li><strong>Jual dan Sewa Balik Agunan Mobil:</strong> 0,65% per bulan (tenor 1 tahun).</li>\n<li><strong>Promo Bunga 0%:</strong> Dengan syarat tertentu seperti bebas 2–3x angsuran.</li>\n</ul>\n<p><strong>Biaya Tambahan:</strong> Termasuk biaya administrasi dan asuransi.</p>",
+                teams: ["taasset"]
+            },
+            {
+                id: 140,
+                keywords: ["payku", "itc auto multi finance", "payku aplikasi", "pembiayaan payku"],
+                answer: "<p><strong>Apa Itu PAYKU / ITC Auto Multi Finance?</strong></p>\n<p>PAYKU adalah platform digital yang dikembangkan oleh ITC Auto Multi Finance untuk memberikan kemudahan akses pinjaman dan pembayaran secara online.</p>\n\n<p><strong>Syarat Pengajuan:</strong></p>\n<ul>\n<li>WNI</li>\n<li>Usia 18–64 tahun</li>\n<li>KTP aktif</li>\n<li>Nomor HP aktif</li>\n<li>Pendapatan tetap</li>\n<li>Rekening bank</li>\n</ul>",
+                teams: ["taasset"]
+            },
+            {
+                id: 141,
+                keywords: ["perjanjian adapundi", "perjanjian pendanaan", "hukum adapundi", "pp adapundi"],
+                answer: "<p><strong>Perjanjian Pendanaan di Adapundi</strong></p>\n<p>Disebut sebagai <strong>\"Perjanjian Pendanaan\"</strong>, ini adalah dokumen hukum yang mengatur hubungan antara Pemberi Dana dan Penerima Dana.</p>\n\n<p><strong>Isi Utama:</strong></p>\n<ul>\n<li>Hak dan kewajiban kedua belah pihak</li>\n<li>Jumlah pinjaman dan tenor</li>\n<li>Suku bunga dan denda</li>\n<li>Mekanisme pelunasan</li>\n<li>Konsekuensi gagal bayar</li>\n</ul>",
+                teams: ["taasset"]
+            },
+            {
+                id: 142,
+                keywords: ["home credit", "home credit indonesia", "pembiayaan home credit", "fintech home credit"],
+                answer: "<p><strong>Apa Itu HOME CREDIT?</strong></p>\n<p><strong>Home Credit Indonesia</strong> adalah perusahaan pembiayaan multinasional yang mulai beroperasi di Indonesia sejak tahun 2013. Mereka menyediakan layanan pembiayaan berbasis teknologi untuk membantu konsumen membeli barang dengan sistem cicilan.</p>",
+                teams: ["taasset"]
+            },
+            {
+                id: 143,
+                keywords: ["langkah pengajuan home credit", "my home credit", "foto ktp home credit", "data diri home credit"],
+                answer: "<p><strong>Langkah-Langkah Pengajuan di Home Credit:</strong></p>\n<ol>\n<li><strong>Buka Aplikasi My Home Credit</strong></li>\n<li><strong>Foto KTP dan Selfie</strong> dengan jelas</li>\n<li><strong>Isi Data Diri dan Penghasilan</strong> secara lengkap dan benar</li>\n<li><strong>Tunggu Persetujuan</strong> dari Home Credit</li>\n</ol>",
+                teams: ["taasset"]
+            },
+            {
+                id: 144,
+                keywords: ["kolektibilitas", "kol", "status kolektibilitas", "nasabah macet", "nasabah kolektibilitas"],
+                answer: "<p><strong>Klasifikasi Kolektibilitas</strong></p>\n<p>Status kolektibilitas menunjukkan kondisi pembayaran nasabah terhadap pinjaman. Terbagi menjadi lima tingkat:</p>\n\n<ul>\n<li><strong>KOL-1 (LANCAR):</strong> Pembayaran selalu tepat waktu.</li>\n<li><strong>KOL-2 (DALAM PERHATIAN KHUSUS):</strong> Tunggakan 1–90 hari.</li>\n<li><strong>KOL-3 (KURANG LANCAR):</strong> Tunggakan 91–120 hari.</li>\n<li><strong>KOL-4 (DIRAGUKAN):</strong> Tunggakan 121–180 hari.</li>\n<li><strong>KOL-5 (MACET):</strong> Tunggakan lebih dari 180 hari.</li>\n</ul>",
+                teams: ["taasset"]
+            },
+            {
+                id: 145,
+                keywords: ["ch sudah tidak bekerja", "tidak bekerja", "masa kerja habis", "pengangguran"],
+                answer: "<p><strong>Jawaban Jika CH Sudah Tidak Bekerja:</strong></p>\n<p>Ya Pak/Ibu, kami memahami situasi tersebut. Namun dalam perjanjian awal tidak ada ketentuan bahwa tunggakan bisa diabaikan karena tidak bekerja. Oleh karena itu, kewajiban tetap harus diselesaikan.</p>",
+                teams: ["taasset"]
+            },
+            {
+                id: 146,
+                keywords: ["ch minta menyelesaikan bulan depan", "tunda pembayaran", "penjadwalan ulang"],
+                answer: "<p><strong>Jika CH Minta Menyelesaikan di Bulan Depan:</strong></p>\n<p>Kalau memang bapak/ibu benar-benar berniat baik untuk menyelesaikan di bulan depan, silahkan buktikan itikad baik dengan membayar uang muka minimal Rp500 ribu–Rp1 juta di bulan ini agar keringanan tetap bisa diajukan.</p>",
+                teams: ["taasset"]
+            },
+            {
+                id: 147,
+                keywords: ["ch minta keringanan lebih", "keringanan melebihi prosedur", "negosiasi tinggi"],
+                answer: "<p><strong>Jika CH Minta Keringanan Melebihi Prosedur:</strong></p>\n<ol>\n<li>Katakan bahwa Anda akan ajukan ke manajemen.</li>\n<li>Setelah 10–20 menit, sampaikan bahwa permohonan ditolak karena terlalu rendah.</li>\n<li>Ingatkan bahwa jika dipaksakan, akan ada risiko tagihan tetap datang.</li>\n</ol>",
+                teams: ["taasset"]
+            },
+            {
+                id: 148,
+                keywords: ["cara hitung lundis", "perhitungan lundis", "lundis 1 lundis 2", "principal x 120%", "principal x 150%"],
+                answer: "<p><strong>Cara Hitung Lundis (Diskon Pelunasan):</strong></p>\n<ul>\n<li><strong>Lundis 1:</strong> OS dikurangi 0%–90%</li>\n<li><strong>Lundis 2:</strong> Principal × 120% atau × 150%</li>\n</ul>\n\n<p><strong>Contoh:</strong></p>\n<ul>\n<li>OS = 396.210.343 → 90% off = 39.621.034</li>\n<li>Principal = 18.641.288 × 150% = 27.961.932</li>\n</ul>",
+                teams: ["taasset"]
+            },
+            {
+                id: 149,
+                keywords: ["penyampaian pertama", "komunikasi pertama", "telepon pertama", "wa pertama", "penyampaian pertama ch"],
+                answer: "<p><strong>Kata-Kata Penyampaian Pertama via Telpon/WA</strong></p>\n<ol>\n<li>\"Pagi Pak, Ini Dengan orang tua dari Natasya?\"</li>\n<li>\"Siang Bu Junila, Ibu masih di Tangerang sekarang Bu?\"</li>\n<li>\"Siang Bu Lania, Kerja di mana sekarang Bu?\"</li>\n<li>\"Apa kabarnya Bu Lani? Anak sudah berapa sekarang Bu?\"</li>\n</ol>",
+                teams: ["taasset"]
+            },
+            {
+                id: 150,
+                keywords: ["cessie", "penyerahan piutang", "pihak cedent", "cessionaris", "cessus"],
+                answer: "<p><strong>Apa Itu Cessie?</strong></p>\n<p>Cessie adalah penyerahan hak tagih dari kreditur (cedent) kepada pihak lain (cessionaris), biasanya dilakukan oleh lembaga keuangan kepada debt collector.</p>\n\n<p><strong>Pihak-Pihak dalam Cessie:</strong></p>\n<ol>\n<li><strong>Cedent:</strong> Pemberi utang asli</li>\n<li><strong>Cessionaris:</strong> Pihak penerima hak tagih</li>\n<li><strong>Cessus:</strong> Debitur/peminjam</li>\n</ol>",
+                teams: ["taasset"]
+            },
+            {
+                id: 151,
+                keywords: ["penagihan pihak kedua", "secondary billing", "third party billing", "penagihan pihak ketiga"],
+                answer: "<p><strong>Pengertian Penagihan Pihak Kedua dan Ketiga</strong></p>\n<ul>\n<li><strong>Pihak Kedua:</strong> Internal lembaga keuangan (misalnya internal bank).</li>\n<li><strong>Pihak Ketiga:</strong> Debt collector eksternal (seperti TA Asset).</li>\n</ul>\n<p>Penagihan pihak ketiga wajib sesuai aturan OJK, termasuk larangan ancaman fisik atau intimidasi.</p>",
+                teams: ["taasset"]
+            },
+            {
+                id: 152,
+                keywords: ["uangme", "uangme fintek", "pinjaman uangme", "peer to peer lending"],
+                answer: "<p><strong>Apa Itu UANGME?</strong></p>\n<p><strong>PT Uangme Fintek Indonesia</strong> adalah perusahaan fintech yang bergerak di bidang peer-to-peer lending. Berizin dari OJK sejak Juli 2018, UangMe menyediakan layanan pinjaman online tanpa agunan dengan proses sepenuhnya digital.</p>",
+                teams: ["taasset"]
+            },
+            {
+                id: 153,
+                keywords: ["syarat pinjam uangme", "ktp uangme", "warga negara indonesia", "pekerjaan uangme"],
+                answer: "<p><strong>Syarat Pinjam di UangMe:</strong></p>\n<ul>\n<li>WNI</li>\n<li>Usia 25–55 tahun</li>\n<li>KTP + foto selfie</li>\n<li>Data diri lengkap</li>\n<li>Pekerjaan tetap</li>\n<li>Rekening bank atas nama sendiri</li>\n</ul>",
+                teams: ["taasset"]
+            },
+            {
+                id: 154,
+                keywords: ["suku bunga uangme", "biaya layanan uangme", "denda uangme", "ppn uangme"],
+                answer: "<p><strong>Bunga dan Biaya Layanan UangMe:</strong></p>\n<ul>\n<li><strong>Bunga Harian:</strong> 0,03%–0,3% per hari</li>\n<li><strong>Denda Keterlambatan:</strong> 1,2% dari angsuran per hari</li>\n<li><strong>PPN:</strong> 11% dari biaya layanan</li>\n<li><strong>Keamanan Data:</strong> Diinformasikan terjamin</li>\n</ul>",
+                teams: ["taasset"]
+            },
+            {
+                id: 155,
+                keywords: ["konsekuensi gagal bayar adapundi", "denda adapundi", "slip ojk", "penagihan adapundi", "hukum adapundi"],
+                answer: "<p><strong>Konsekuensi Gagal Bayar di Adapundi:</strong></p>\n<ul>\n<li><strong>Denda Keterlambatan:</strong> Sesuai perjanjian</li>\n<li><strong>Penagihan Intensif:</strong> Melalui telpon, WA, email</li>\n<li><strong>Laporan ke SLIK OJK:</strong> Mempengaruhi riwayat kredit</li>\n<li><strong>Tindakan Hukum:</strong> Seperti gugatan atau arbitrase</li>\n<li><strong>Penagihan DC:</strong> Dilakukan secara profesional dan sesuai regulasi</li>\n</ul>",
+                teams: ["taasset"]
+            },
+            {
+                id: 156,
+                keywords: ["perjanjian uangme", "riplay umum uangme", "risiko gagal bayar uangme", "biaya layanan uangme"],
+                answer: "<p><strong>Perjanjian Pinjaman di UangMe</strong></p>\n<p>Mencakup suku bunga, biaya layanan, durasi pinjaman, dan risiko gagal bayar. RIPLAY Umum hanya sebagai informasi, tidak menciptakan ikatan hukum.</p>",
+                teams: ["taasset"]
+            },
+            {
+                id: 157,
+                keywords: ["baju warna merah", "warna seragam ta asset", "seragam collection taasset", "aturan dress code"],
+                answer: "<p><strong>Dress Code Collection TA Asset:</strong></p>\n<ul>\n<li><strong>Hari Senin–Kamis:</strong> Baju merah + celana hitam</li>\n<li><strong>Hari Jumat:</strong> Bebas rapi</li>\n<li><strong>Hari Sabtu:</strong> Seragam biru</li>\n</ul>",
+                teams: ["taasset"]
+            },
+            {
+                id: 158,
+                keywords: ["suku bunga adapundi", "bunga harian adapundi", "denda keterlambatan adapundi", "ppn adapundi"],
+                answer: "<p><strong>Bunga dan Biaya Adapundi:</strong></p>\n<ul>\n<li><strong>Bunga Harian:</strong> 0,03%–0,3% per hari</li>\n<li><strong>PPN:</strong> 11% dari biaya layanan</li>\n<li><strong>Denda Keterlambatan:</strong> 1,2% dari angsuran per hari</li>\n</ul>",
+                teams: ["taasset"]
+            },
+            {
+                id: 159,
+                keywords: ["kantor cabang ta asset", "lokasi kantor ta asset", "alamat kantor ta asset", "cabang ta asset"],
+                answer: "<p><strong>Kantor Cabang TA Asset</strong></p>\n<p>Untuk alamat kantor cabang TA Asset, silakan hubungi tim HRD atau team leader Anda. Kantor cabang tersebar di seluruh wilayah operasional.</p>",
+                teams: ["taasset"]
+            },
+            {
+                id: 160,
+                keywords: ["cara verifikasi data", "validasi data", "cek identitas ch", "konfirmasi data ch"],
+                answer: "<p><strong>Cara Verifikasi Data Nasabah (CH):</strong></p>\n<ol>\n<li>Tanyakan nama lengkap</li>\n<li>Konfirmasi alamat saat ini</li>\n<li>Validasi nomor HP dan pekerjaan</li>\n<li>Gunakan tracing kantor/keluarga jika diperlukan</li>\n</ol>",
+                teams: ["taasset"]
+            },
+            {
+                id: 161,
+                keywords: ["tracing kantor", "tracing keluarga", "cari kontak ch", "verifikasi no hp"],
+                answer: "<p><strong>Cara Tracing Kontak Nasabah:</strong></p>\n<ol>\n<li>Gunakan fitur tracing menggunakan NIK atau nama lengkap</li>\n<li>Verifikasi kontak darurat (EC)</li>\n<li>Kontak kantor untuk tracing pekerjaan</li>\n<li>Kirim redaksi resmi jika diperlukan</li>\n</ol>",
+                teams: ["taasset"]
+            },
+            {
+                id: 162,
+                keywords: ["program keringanan ta asset", "diskon pelunasan", "penghapusan denda", "skema dp", "negosiasi cicilan"],
+                answer: "<p><strong>Program Keringanan di TA Asset:</strong></p>\n<ul>\n<li><strong>Pelunasan Sekali Bayar:</strong> Diskon besar</li>\n<li><strong>Penghapusan Denda:</strong> Syarat tertentu</li>\n<li><strong>DP (Down Payment):</strong> Bayar separuh, sisanya dicicil</li>\n<li><strong>Negosiasi Cicilan:</strong> Bayar beberapa kali angsuran</li>\n</ul>",
+                teams: ["taasset"]
+            },
+            {
+                id: 163,
+                keywords: ["cara komunikasi efektif", "strategi percakapan", "collection formal nonformal", "soft approach"],
+                answer: "<p><strong>Strategi Komunikasi Efektif dengan Nasabah</strong></p>\n<ul>\n<li><strong>Formal:</strong> Gunakan greeting → perkenalan → validasi data → negosiasi pembayaran</li>\n<li><strong>Non-formal:</strong> Basa-basi dulu, tanya kabar, lalu arahkan ke tagihan</li>\n</ul>",
+                teams: ["taasset"]
+            },
+            {
+                id: 164,
+                keywords: ["redaksi", "mengirim redaksi", "format redaksi", "surat somasi", "somasi"],
+                answer: "<p><strong>Format Dasar Redaksi (Surat Somasi):</strong></p>\n<ol>\n<li>Nama lengkap nasabah</li>\n<li>No kontrak</li>\n<li>Total tagihan</li>\n<li>Metode pembayaran</li>\n<li>Tenggat waktu</li>\n<li>Imbauan segera lunaskan</li>\n</ol>",
+                teams: ["taasset"]
+            },
+            {
+                id: 165,
+                keywords: ["kontak kantor ch", "telepon tempat kerja", "call center ch", "follow up kantor"],
+                answer: "<p><strong>Cara Menghubungi Kantor Nasabah (CH):</strong></p>\n<ol>\n<li>Hubungi nomor kantor</li>\n<li>Minta langsung disambungkan ke CH</li>\n<li>Jika CH tidak ada, tanyakan detail resign atau pemindahan alamat</li>\n<li>Tetap follow-up berkala meskipun CH tidak tersedia</li>\n</ol>",
+                teams: ["taasset"]
+            },
+            {
+                id: 166,
+                keywords: ["nasabah protes", "keluhan nasabah", "penanganan keluhan", "customer complaint"],
+                answer: "<p><strong>Menangani Keluhan Nasabah</strong></p>\n<ul>\n<li>Dengarkan dengan sabar</li>\n<li>Jelaskan kebijakan perusahaan</li>\n<li>Tawarkan solusi alternatif (DP, diskon, cicilan)</li>\n<li>Jika tidak puas, arahkan ke layanan pelanggan atau legal</li>\n</ul>",
+                teams: ["taasset"]
+            },
+            {
+                id: 167,
+                keywords: ["manajemen waktu", "atur waktu kerja", "productivity deskcoll", "prioritas kerja"],
+                answer: "<p><strong>Manajemen Waktu Desk Collection</strong></p>\n<ul>\n<li>Bagi waktu: Report cepat, Collect maksimal</li>\n<li>Utamakan akun prioritas (big balance, high risk)</li>\n<li>Buat target harian dan pantau progres</li>\n<li>Review hasil setiap sore untuk persiapan esok</li>\n</ul>",
+                teams: ["taasset"]
+            },
+            {
+                id: 168,
+                keywords: ["target collection", "quota deskcoll", "performa harian", "daily target"],
+                answer: "<p><strong>Target Harian Collection</strong></p>\n<ul>\n<li>Target collection berbeda tiap cabang</li>\n<li>Umumnya berupa jumlah akun yang harus dihubungi/hari</li>\n<li>Ditambah dengan jumlah akun yang harus diselesaikan (pelunasan atau janji bayar)</li>\n</ul>",
+                teams: ["taasset"]
+            },
+            {
+                id: 169,
+                keywords: ["keberatan bunga denda", "terlalu besar bunga", "keberatan denda", "keluhan biaya tambahan"],
+                answer: "<p><strong>Jika Nasabah Keberatan Bunga/Denda</strong></p>\n<ul>\n<li>Jelaskan bahwa bunga/denda sesuai perjanjian</li>\n<li>Tanyakan kenapa tidak batalkan akad jika merasa dirugikan</li>\n<li>Informasikan bahwa kita hanya menjalankan prosedur sesuai sistem</li>\n</ul>",
+                teams: ["taasset"]
+            },
+            {
+                id: 170,
+                keywords: ["nasabah klaim tidak terima uang", "tidak ada pencairan", "tidak ada transaksi", "tidak ada rekening"],
+                answer: "<p><strong>Jika Nasabah Klaim Tidak Terima Uang</strong></p>\n<ul>\n<li>Periksa riwayat transaksi di sistem</li>\n<li>Kirimkan bukti pencairan dan transfer</li>\n<li>Jika masih tidak terima, arahkan ke customer service atau legal</li>\n</ul>",
+                teams: ["taasset"]
+            },
+            {
+                id: 171,
+                keywords: ["tagihan digunakan orang lain", "teman pakai data", "keluarga ambil pinjaman", "salah orang ambil"],
+                answer: "<p><strong>Jika Tagihan Digunakan Orang Luar</strong></p>\n<ul>\n<li>Kami hanya boleh menagih ke pemilik data</li>\n<li>Silakan pemilik data komunikasikan ke pihak bersangkutan</li>\n<li>Kami tetap akan lanjutkan penagihan ke pemilik data</li>\n</ul>",
+                teams: ["taasset"]
+            },
+            {
+                id: 172,
+                keywords: ["nasabah blokir komunikasi", "no hp mati", "tidak bisa kontak ch", "ch tidak merespons"],
+                answer: "<p><strong>Jika Nasabah Blokir Komunikasi</strong></p>\n<ul>\n<li>Coba kontak EC atau kantor</li>\n<li>Kirimkan redaksi ke alamat rumah atau kantor</li>\n<li>Jika semua cara gagal, pindah ke akun lain</li>\n</ul>",
+                teams: ["taasset"]
+            },
+            {
+                id: 173,
+                keywords: ["nasabah tidak punya uang", "tidak ada dana", "tidak mampu bayar", "solusi collection"],
+                answer: "<p><strong>Jika Nasabah Tidak Punya Dana</strong></p>\n<ul>\n<li>Tawarkan program DP atau cicilan bertahap</li>\n<li>Jelaskan opsi keringanan yang tersedia</li>\n<li>Tekankan pentingnya penyelesaian demi SLIK OJK</li>\n</ul>",
+                teams: ["taasset"]
+            },
+            {
+                id: 174,
+                keywords: ["kolektibilitas 4", "kol 4", "macet parah", "status kol 4"],
+                answer: "<p><strong>Status Kolektibilitas 4</strong></p>\n<p>Merupakan tahap di mana tagihan nasabah menunggak selama 121–180 hari. Termasuk kategori sangat serius dan memerlukan penanganan intensif.</p>",
+                teams: ["taasset"]
+            },
+            {
+                id: 175,
+                keywords: ["kolektibilitas 5", "kol 5", "nasabah macet", "status kol 5"],
+                answer: "<p><strong>Status Kolektibilitas 5</strong></p>\n<p>Merupakan status kolektibilitas terburuk, yaitu tagihan menunggak >180 hari. Nasabah bisa masuk daftar hitam dan dapat dituntut secara hukum.</p>",
+                teams: ["taasset"]
+            },
+            {
+                id: 176,
+                keywords: ["cara pembayaran adapundi", "metode bayar adapundi", "transfer adapundi", "virtual account"],
+                answer: "<p><strong>Metode Pembayaran di Adapundi:</strong></p>\n<ul>\n<li>Transfer ke virtual account</li>\n<li>Bayar via Alfamart/Indomaret</li>\n<li>Bank transfer</li>\n<li>QRIS atau e-wallet</li>\n</ul>",
+                teams: ["taasset"]
+            },
+            {
+                id: 177,
+                keywords: ["cara cek tagihan", "cek nominal", "total pembayaran", "cek via app"],
+                answer: "<p><strong>Cara Cek Tagihan di TA Asset:</strong></p>\n<ul>\n<li>Login ke aplikasi terkait (Adapundi, UangMe, dll)</li>\n<li>Cek history pembayaran dan denda</li>\n<li>Jika tidak bisa akses, tanyakan ke tim atau TL</li>\n</ul>",
+                teams: ["taasset"]
+            },
+            {
+                id: 178,
+                keywords: ["ch tidak mau bayar va", "virtual account", "rekening lama", "bayar ke no kontrak lama"],
+                answer: "<p><strong>Jika Nasabah Menolak Bayar ke VA</strong></p>\n<p>\"Bapak/Ibu, pembayaran saat ini wajib melalui Virtual Account (VA). Jika dibayarkan ke no kontrak lama, dana akan diretur karena status kolektibilitas 5.\"</p>",
+                teams: ["taasset"]
+            },
+            {
+                id: 179,
+                keywords: ["ch minta bukti tagihan", "surat tagihan", "bukti hutang", "surat somasi"],
+                answer: "<p><strong>Jika CH Minta Bukti Tagihan</strong></p>\n<ul>\n<li>Kirimkan redaksi resmi via WhatsApp/email</li>\n<li>Lampirkan bukti pencairan</li>\n<li>Jika perlu, kunjungi kantor cabang untuk cetak dokumen resmi</li>\n</ul>",
+                teams: ["taasset"]
+            },
+            {
+                id: 180,
+                keywords: ["ch tidak tau pinjaman", "tidak pernah pinjam", "tidak pernah ajukan", "tidak tahu produk"],
+                answer: "<p><strong>Jika Nasabah Tidak Tau Pernah Ajukan Pinjaman</strong></p>\n<ul>\n<li>Kirimkan bukti pencairan</li>\n<li>Gunakan tracing untuk konfirmasi</li>\n<li>Jika masih tidak yakin, arahkan ke legal</li>\n</ul>",
+                teams: ["taasset"]
+            },
+            // Manager/Admin Pairs
+        ];
+
+        // --- State Management ---
+        let currentUser = null;
+        let isTyping = false;
+        let sessionTimeout = null;
+        let lastActivity = Date.now();
+        let isInPenaltyMode = false;
+        let penaltyRepeatCount = 0;
+        let commonQuestionCount = 0;
+        const COMMON_QUESTION_LIMIT = 4;
+        const SESSION_DURATION = 15 * 60 * 1000;
+        const CHAT_HISTORY_KEY = 'chatbotMessageHistory_v5_lunr';
+
+        // [PERUBAHAN BESAR]: Variabel untuk menyimpan search index dari lunr.js
+        let lunrIndex;
+
+        // [PERUBAHAN BESAR]: Fungsi untuk membuat search index dari data Q&A
+        function initializeSearchIndex() {
+            lunrIndex = lunr(function () {
+                this.ref('id'); // Tentukan 'id' sebagai referensi unik untuk setiap dokumen
+                this.field('keywords', { boost: 10 }); // Beri bobot lebih tinggi untuk kata kunci
+                this.field('answer_text'); // Index juga isi dari jawaban
+
+                qaPairs.forEach(function (doc) {
+                    this.add({
+                        id: doc.id,
+                        keywords: doc.keywords.join(' '),
+                        // Bersihkan tag HTML dari jawaban sebelum di-index
+                        answer_text: doc.answer.toString().replace(/<[^>]*>/g, ' ')
+                    });
+                }, this);
+            });
+            console.log("lunr.js search index initialized successfully.");
+        }
+
+        // [PERUBAHAN BESAR]: Fungsi generateResponse ditulis ulang dengan lunr.js
+        function generateResponse(userMessage) {
+            const cleanedMessage = userMessage.toLowerCase().trim()
+                .replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?]/g, "")
+                .trim();
+
+            if (!cleanedMessage) {
+                return "Maaf, saya tidak menerima pesan kosong.";
+            }
+
+            // Lakukan pencarian menggunakan lunr.js
+            const searchResults = lunrIndex.search(cleanedMessage);
+            
+            let bestMatch = null;
+
+            // Cari hasil pertama yang relevan dan bisa diakses oleh user
+            for (const result of searchResults) {
+                const docId = result.ref;
+                // Cari dokumen asli dari qaPairs berdasarkan id
+                const originalDoc = qaPairs.find(d => d.id == docId);
+
+                if (!originalDoc) continue;
+
+                // Cek hak akses berdasarkan tim dan role
+                const docTeams = originalDoc.teams || [];
+                const isCommon = docTeams.length === 0;
+                const isTeamMatch = currentUser && docTeams.includes(currentUser.team);
+                const isPrivilegedUser = currentUser && (currentUser.role === 'manager' || currentUser.role === 'administrator');
+
+                if (isCommon || isTeamMatch || isPrivilegedUser) {
+                    // Jika user punya akses, ini adalah jawaban terbaik
+                    bestMatch = {
+                        ...originalDoc,
+                        isCommon: isCommon,
+                        score: result.score
+                    };
+                    break; // Hentikan pencarian setelah menemukan yang paling relevan dan bisa diakses
+                }
+            }
+
+            // Evaluasi jawaban terbaik yang ditemukan
+            const SEARCH_THRESHOLD = 0.5; // Ambang batas skor (bisa disesuaikan jika perlu)
+            if (bestMatch && bestMatch.score > SEARCH_THRESHOLD) {
+                // Logika penalty mode untuk user 'tim'
+                if (bestMatch.isCommon && currentUser.role === 'tim') {
+                    commonQuestionCount++;
+                    if (commonQuestionCount >= COMMON_QUESTION_LIMIT && !isInPenaltyMode) {
+                        isInPenaltyMode = true;
+                        penaltyRepeatCount = 0;
+                        return "⚠️ Hei! Jan basa-basi terus. Fokus kerja dong, target belum kecapai, elo malah terus main-main, ngotak lah 😤";
+                    }
+                } else if (!bestMatch.isCommon && currentUser.role === 'tim') {
+                    // Reset penalty jika bertanya soal spesifik tim
+                    isInPenaltyMode = false;
+                    commonQuestionCount = 0;
+                    penaltyRepeatCount = 0;
+                }
+
+                if (isInPenaltyMode && bestMatch.isCommon && currentUser.role === 'tim') {
+                    penaltyRepeatCount++;
+                    const responses = ["😤 Udah dibilangin jangan tanya yang umum mulu!", "😡 Nih bot sabar, tapi jangan disiksa!", "😠 Kerja woi, bukan ngobrol doang!"];
+                    return responses[penaltyRepeatCount % responses.length];
+                }
+
+                const finalAnswer = bestMatch.answer;
+                return Array.isArray(finalAnswer) ? finalAnswer.join('<br>') : finalAnswer;
+            } else {
+                // Jawaban fallback jika tidak ada yang cocok atau skor terlalu rendah
+                let teamForFallback = currentUser.role === 'tim' ? `untuk Tim ${currentUser.team.toUpperCase()}` : `untuk peran Anda`;
+                return `Maaf, saya belum menemukan informasi yang relevan ${teamForFallback}. Coba gunakan kata kunci lain ya.`;
+            }
+        }
+
+        // --- Sisa fungsi (UI, session, dll.) tidak ada perubahan ---
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeSearchIndex(); // Panggil fungsi setup index saat halaman siap
+            checkExistingSession();
+            loginForm.addEventListener('submit', handleLogin);
+            messageInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+            });
+            sendBtn.addEventListener('click', sendMessage);
+            logoutBtn.addEventListener('click', handleLogout);
+            trackUserActivity();
+            const observer = new MutationObserver(function() {
+                if (chatContainer.style.display === 'flex') {
+                    messageInput.focus();
+                }
+            });
+            observer.observe(chatContainer, { attributes: true, attributeFilter: ['style'] });
+        });
+
+        function checkExistingSession() {
+            const sessionData = sessionStorage.getItem('chatbotSession');
+            if (sessionData) {
+                try {
+                    const session = JSON.parse(sessionData);
+                    if (Date.now() - session.lastActivity < SESSION_DURATION) {
+                        currentUser = session.user;
+                        lastActivity = session.lastActivity; 
+                        showChatInterface(); 
+                        loadChatHistory();   
+                        startSessionTimer(); 
+                        return;
+                    }
+                } catch (e) { console.error("Error parsing session data:", e); }
+                sessionStorage.removeItem('chatbotSession');
+                sessionStorage.removeItem(CHAT_HISTORY_KEY);
+            }
+        }
+        
+        function loadChatHistory() {
+            const historyData = sessionStorage.getItem(CHAT_HISTORY_KEY);
+            if (historyData) {
+                try {
+                    const history = JSON.parse(historyData);
+                    if (history && history.length > 0) {
+                        chatMessages.innerHTML = '';
+                        history.forEach(msgData => addMessageToDOM(msgData.text, msgData.sender, msgData.time));
+                    }
+                } catch (e) { console.error("Error parsing chat history:", e); }
+            }
+            scrollToBottom();
+        }
+
+        function saveSession() {
+            if (currentUser) {
+                sessionStorage.setItem('chatbotSession', JSON.stringify({ user: currentUser, lastActivity: lastActivity }));
+            }
+        }
+
+        function updateActivity() {
+            lastActivity = Date.now();
+            saveSession();
+            resetSessionTimer();
+        }
+
+        function trackUserActivity() {
+            ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click'].forEach(event => {
+                document.addEventListener(event, () => { if (currentUser) updateActivity(); }, true);
+            });
+        }
+
+        function startSessionTimer() { resetSessionTimer(); }
+
+        function resetSessionTimer() {
+            if (sessionTimeout) clearTimeout(sessionTimeout);
+            if (currentUser) {
+                const timeRemaining = SESSION_DURATION - (Date.now() - lastActivity);
+                sessionTimeout = setTimeout(handleSessionTimeout, timeRemaining > 0 ? timeRemaining : 1);
+            }
+        }
+
+        function handleSessionTimeout() {
+            if (currentUser) {
+                 alert('Sesi Anda telah berakhir karena tidak aktif. Silakan login kembali.');
+                 handleLogout();
+            }
+        }
+
+        function handleLogin(e) {
+            e.preventDefault();
+            const userType = document.getElementById('userType').value;
+            const username = document.getElementById('username').value.toLowerCase();
+            const password = document.getElementById('password').value;
+            
+            errorMessage.textContent = '';
+            
+            let foundUser = accounts[userType]?.find(acc => acc.username === username && acc.password === password);
+            
+            if (foundUser) {
+                currentUser = { ...foundUser, role: userType };
+                lastActivity = Date.now(); 
+                sessionStorage.removeItem(CHAT_HISTORY_KEY); 
+                saveSession(); 
+                showChatInterface(); 
+                startSessionTimer(); 
+            } else {
+                errorMessage.textContent = 'Username atau password salah!';
+                document.getElementById('password').value = '';
+            }
+        }
+
+        function showChatInterface() {
+            loginContainer.style.display = 'none';
+            chatContainer.style.display = 'flex';
+            
+            let roleDisplay = currentUser.role.charAt(0).toUpperCase() + currentUser.role.slice(1);
+            let teamForDisplay = "";
+
+            if (currentUser.role === 'tim' && currentUser.team) {
+                teamForDisplay = `(Tim ${currentUser.team.replace('tim_', '').replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}) `;
+            }
+            
+            userInfo.textContent = `${currentUser.fullName} - ${roleDisplay} ${teamForDisplay}`;
+            
+            if (document.getElementById('chatMessages').children.length === 0) {
+                const welcomeMessage = `Halo ${currentUser.fullName}! Saya adalah Assistant Chatbot. Bagaimana saya bisa membantu Anda hari ini?`;
+                addMessageToChat(welcomeMessage, 'bot');
+            }
+            setTimeout(() => messageInput.focus(), 100);
+        }
+
+        function handleLogout() {
+            if (sessionTimeout) clearTimeout(sessionTimeout);
+            currentUser = null;
+            sessionStorage.removeItem('chatbotSession');
+            sessionStorage.removeItem(CHAT_HISTORY_KEY); 
+            chatContainer.style.display = 'none';
+            loginContainer.style.display = 'block';
+            loginForm.reset();
+            errorMessage.textContent = '';
+            chatMessages.innerHTML = ''; 
+        }
+
+        function sendMessage() {
+            const messageText = messageInput.value.trim();
+            if (!messageText || isTyping) return;
+            updateActivity(); 
+            addMessageToChat(messageText, 'user'); 
+            messageInput.value = '';
+            showTypingIndicator();
+            setTimeout(() => {
+                const response = generateResponse(messageText);
+                hideTypingIndicator();
+                addMessageToChat(response, 'bot'); 
+            }, 500 + Math.random() * 800);
+        }
+
+        function addMessageToChat(text, sender) {
+            const time = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+            addMessageToDOM(text, sender, time);
+            const historyData = sessionStorage.getItem(CHAT_HISTORY_KEY);
+            let history = historyData ? JSON.parse(historyData) : [];
+            history.push({ text, sender, time });
+            sessionStorage.setItem(CHAT_HISTORY_KEY, JSON.stringify(history));
+        }
+        
+        function addMessageToDOM(text, sender, time) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${sender}`;
+            messageDiv.innerHTML = `<div class="message-bubble">${text}</div><div class="message-time">${time}</div>`;
+            chatMessages.appendChild(messageDiv);
+            scrollToBottom();
+        }
+
+        function showTypingIndicator() {
+            if (isTyping) return;
+            isTyping = true;
+            sendBtn.disabled = true; 
+            const typingDiv = document.createElement('div');
+            typingDiv.className = 'message bot';
+            typingDiv.id = 'typingIndicator';
+            typingDiv.innerHTML = `<div class="typing-indicator"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div>`;
+            chatMessages.appendChild(typingDiv);
+            scrollToBottom();
+        }
+
+        function hideTypingIndicator() {
+            const typingIndicator = document.getElementById('typingIndicator');
+            if (typingIndicator) typingIndicator.remove();
+            isTyping = false;
+            sendBtn.disabled = false; 
+        }
+
+        function scrollToBottom() {
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+    </script>
+</body>
+</html>
